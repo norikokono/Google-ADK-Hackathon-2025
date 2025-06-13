@@ -1,0 +1,12 @@
+multi_tool_agent/
+This is your backend (Python, ADK, agents, orchestrator, etc.).
+
+my-chat-app/
+This is your frontend (React app, where you put ChatApp.jsx).
+
+How to connect them:
+
+Run your backend (multi_tool_agent) so it exposes an API endpoint (e.g., /api/chat).
+Run your frontend (my-chat-app) with npm start or yarn start.
+In your React code, make sure the fetch URL matches your backend endpoint.
+If running locally on different ports, use the full URL, e.g.:
