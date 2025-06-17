@@ -1,0 +1,306 @@
+/* Remove old styles */
+.App, .App-logo, .App-header, .App-link {
+  display: none;
+}
+
+/* Base styles */
+.app {
+  text-align: center;
+  padding: 2rem;
+  background: #f8fafc;
+  min-height: 100vh;
+  font-family: 'Inter', sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  padding: 1rem;
+  background-color: #4a154b;
+  color: white;
+}
+
+/* Main content area */
+main {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* List Containers */
+.list-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-align: left;
+}
+
+/* Welcome Message */
+.welcome-message {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: #f0f7ff;
+  border-radius: 8px;
+  border-left: 4px solid #4a90e2;
+}
+
+/* List Sections */
+.list-section {
+  margin-bottom: 2rem;
+}
+
+.list-section h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #4a90e2;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+}
+
+/* List Items */
+.option-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.option-item {
+  display: flex;
+  align-items: baseline;
+  padding: 0.75rem;
+  margin: 0.5rem 0;
+  background: #f8fafc;
+  border-radius: 8px;
+  transition: transform 0.2s;
+}
+
+.option-item:hover {
+  transform: translateX(5px);
+  background: #f0f7ff;
+}
+
+/* Emoji Icons */
+.emoji-icon {
+  flex-shrink: 0;
+  margin-right: 0.75rem;
+  font-size: 1.2rem;
+}
+
+/* Category Lists */
+.category-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.category-list {
+  background: #fff;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Examples List */
+.examples-list {
+  margin: 1rem 0;
+}
+
+.example-item {
+  padding: 0.75rem;
+  margin: 0.5rem 0;
+  background: #f8fafc;
+  border-left: 3px solid #4a90e2;
+  border-radius: 0 8px 8px 0;
+}
+
+/* Pro Tips Section */
+.pro-tips {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-top: 2rem;
+}
+
+.tips-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.tip-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #666;
+}
+
+/* Choice Buttons */
+.choice-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 300px;
+  margin: 2rem auto;
+}
+
+.choice-button {
+  padding: 1rem 1.5rem;
+  background: white;
+  border: 2px solid #4a90e2;
+  border-radius: 12px;
+  color: #4a90e2;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.75rem;
+  text-align: left;
+}
+
+.choice-button:hover {
+  background: #4a90e2;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(74, 144, 226, 0.2);
+}
+
+.choice-button .emoji {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.choice-button .button-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.choice-button .button-description {
+  font-size: 0.875rem;
+  opacity: 0.8;
+  font-weight: normal;
+}
+
+/* Animation for buttons */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.choice-button {
+  animation: fadeInUp 0.3s ease forwards;
+  animation-delay: calc(var(--button-index) * 0.1s);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .story-guide {
+    margin: 1rem;
+    padding: 1rem;
+  }
+
+  .categories {
+    grid-template-columns: 1fr;
+  }
+
+  .tips-list {
+    grid-template-columns: 1fr;
+  }
+
+  .choice-buttons {
+    padding: 0 1rem;
+  }
+  
+  .choice-button {
+    padding: 0.875rem 1.25rem;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.story-guide {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.app h1 {
+  color: #4a90e2;
+  margin-bottom: 2rem;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+}
+
+/* ChatApp specific styles */
+.chat-app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.guide-button {
+  padding: 0.75rem 1.5rem;
+  background: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: background 0.2s ease;
+  margin: 1rem 0;
+}
+
+.guide-button:hover {
+  background: #357ab8;
+}
+
+/* Modal styles */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.close-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 24px;
+  background: none;
+  border: none;
+  cursor: pointer;
+}

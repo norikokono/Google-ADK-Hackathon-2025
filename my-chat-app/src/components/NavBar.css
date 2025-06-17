@@ -1,0 +1,148 @@
+/* Base container styling */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;
+  padding: 0.75rem 1rem;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Logo styling */
+.nav-logo {
+  display: flex;
+  align-items: center;
+}
+
+.nav-logo img {
+  width: 40px;
+  height: 40px;
+  margin-right: 0.5rem;
+}
+
+/* Menu button (hamburger) – visible on mobile */
+.nav-menu-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+/* Navigation links container  */
+/* Default: hidden for mobile view */
+.nav-links {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  transition: all 0.3s ease;
+}
+
+/* Open state for mobile menu */
+.nav-links.open {
+  display: flex;
+}
+
+/* Responsive Layout: on screens wider than 768px */
+@media (min-width: 768px) {
+  .nav-menu-button {
+    display: none; /* Hide toggle on larger screens */
+  }
+  .nav-links {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 1rem;
+  }
+  /* Increase navbar padding on larger screens */
+  .navbar {
+    padding: 1rem 2rem;
+  }
+}
+
+/* Link styling for navigation items */
+.nav-link {
+  text-decoration: none;
+  color: #d2007f;
+  font-weight: 600;
+  font-size: 1rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 12px;
+  transition: color 0.3s ease, background 0.3s ease, transform 0.2s ease;
+}
+
+.nav-link:hover {
+  color: #fff;
+  background: #d2007f;
+  transform: scale(1.03);
+}
+
+.nav-link.active {
+  color: #fff;
+  background: #d2007f;
+  font-weight: 700;
+  padding: 0.8rem 1.3rem;
+  border-radius: 12px;
+}
+
+/* Button styling for Create Story */
+.nav-button {
+  padding: 0.9rem 1.75rem;
+  font-size: 1rem;
+  background: linear-gradient(90deg, #d2007f, #a60064);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease;
+  box-shadow: 0 3px 10px rgba(210, 0, 127, 0.3);
+}
+
+.nav-button:hover {
+  background: linear-gradient(90deg, #a60064, #730049);
+  transform: scale(1.04);
+}
+
+/* Active state for the button */
+.nav-button.active {
+  background: linear-gradient(90deg, #f30089, #c7007a);
+  transform: scale(1.04);
+  box-shadow: 0 3px 15px rgba(210, 0, 127, 0.5);
+}
+
+/* Highlight animation */
+.highlight-button {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(210, 0, 127, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(210, 0, 127, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(210, 0, 127, 0);
+  }
+}
+
+/* In your NavBar.css, add this for subtle animation */
+.nav-logo-name svg text {
+  animation: glow 3s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+  0% { filter: drop-shadow(0 0 1px rgba(206, 74, 226, 0.3)); }
+  100% { filter: drop-shadow(0 0 3px rgba(206, 74, 226, 0.6)); }
+}
+
+/* In your NavBar.css, add this for subtle animation */
+.nav-logo-name svg text {
+  animation: glow 3s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+  0% { filter: drop-shadow(0 0 1px rgba(206, 74, 226, 0.3)); }
+  100% { filter: drop-shadow(0 0 3px rgba(206, 74, 226, 0.6)); }
+}

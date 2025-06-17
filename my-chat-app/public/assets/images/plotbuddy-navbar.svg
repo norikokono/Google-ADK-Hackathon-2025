@@ -1,0 +1,37 @@
+<svg width="180" height="40" viewBox="0 0 180 40" xmlns="http://www.w3.org/2000/svg">
+  <!-- Definitions for gradients -->
+  <defs>
+    <linearGradient id="plotGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ce4ae2" />
+      <stop offset="50%" stop-color="#981782" />
+      <stop offset="100%" stop-color="#b05ca2" />
+    </linearGradient>
+    <linearGradient id="buddyGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#61c6d5" />
+      <stop offset="100%" stop-color="#00ffee" />
+    </linearGradient>
+    <!-- Drop shadow filter -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="1" stdDeviation="1" flood-color="#ce4ae2" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  
+  <!-- Document Icon -->
+  <g transform="translate(0, 5)">
+    <rect x="3" y="3" width="24" height="28" rx="3" fill="#f0f0f0" />
+    <rect x="3" y="3" width="24" height="5" rx="2" fill="url(#plotGradient)" />
+    <rect x="7" y="12" width="16" height="2" rx="1" fill="#e0e0e0" />
+    <rect x="7" y="17" width="16" height="2" rx="1" fill="#e0e0e0" />
+    <rect x="7" y="22" width="10" height="2" rx="1" fill="#e0e0e0" />
+  </g>
+  
+  <!-- Text: Plot -->
+  <text x="35" y="27" font-family="Poppins, 'Segoe UI', sans-serif" font-size="24" font-weight="700" fill="url(#plotGradient)" filter="url(#shadow)">
+    Plot
+  </text>
+  
+  <!-- Text: Buddy -->
+  <text x="83" y="27" font-family="Poppins, 'Segoe UI', sans-serif" font-size="24" font-weight="600" fill="url(#buddyGradient)" filter="url(#shadow)">
+    Buddy
+  </text>
+</svg>

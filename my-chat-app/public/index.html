@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="%PUBLIC_URL%/assets/images/favicon.svg">
+    <link rel="alternate icon" href="%PUBLIC_URL%/assets/images/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#ce4ae2">
+    <meta name="description" content="PlotBuddy - Your AI Story Writing Assistant" />
+    
+    <!-- Preload critical assets -->
+    <link rel="preload" href="/assets/images/plotbuddy-logo.svg" as="image">
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" as="style">
+    
+    <!-- Font optimization -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <link rel="apple-touch-icon" href="/assets/images/plotbuddy-logo.svg" />
+    <!-- For Microsoft/IE -->
+    <meta name="msapplication-TileColor" content="#e91e63">
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    
+    <link rel="manifest" href="/manifest.json" />
+    <title>PlotBuddy</title>
+    
+    <!-- Initial loading styles -->
+    <style>
+      .loading-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background: #f8fafc;
+        font-family: 'Inter', sans-serif;
+      }
+      .loading-logo {
+        width: 96px;
+        height: 96px;
+        animation: float 3s ease-in-out infinite;
+      }
+      @keyframes float {
+        0% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+        100% { transform: translateY(0px); }
+      }
+      .loading-text {
+        margin-top: 1.5rem;
+        color: #4a90e2;
+        font-size: 1.25rem;
+        font-weight: 500;
+      }
+      .loading-dots:after {
+        content: '...';
+        animation: dots 2s steps(4, end) infinite;
+      }
+      @keyframes dots {
+        0%, 20% { content: '.'; }
+        40% { content: '..'; }
+        60% { content: '...'; }
+        80%, 100% { content: ''; }
+      }
+    </style>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run PlotBuddy.</noscript>
+    <div id="root">
+      <div class="loading-container">
+        <img src="/assets/images/plotbuddy-logo.svg" alt="PlotBuddy" class="loading-logo">
+        <p class="loading-text">
+          Starting PlotBuddy<span class="loading-dots"></span>
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

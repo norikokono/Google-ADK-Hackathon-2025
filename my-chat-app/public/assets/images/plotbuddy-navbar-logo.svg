@@ -1,0 +1,15 @@
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <!-- Magenta Circle Background -->
+  <circle cx="12" cy="12" r="11" fill="#e91e63"/>
+  
+  <!-- Document/Window Icon (White) -->
+  <rect x="7" y="7" width="10" height="10" rx="1" fill="#ffffff"/>
+  
+  <!-- Window Header Bar (Slightly Darker Magenta) -->
+  <rect x="7" y="7" width="10" height="2" rx="1" fill="#c2185b"/>
+  
+  <!-- Window Content Indication Lines (Light Gray) -->
+  <rect x="8" y="11" width="8" height="1" rx="0.5" fill="#f0f0f0"/>
+  <rect x="8" y="13" width="8" height="1" rx="0.5" fill="#f0f0f0"/>
+  <rect x="8" y="15" width="5" height="1" rx="0.5" fill="#f0f0f0"/>
+</svg>

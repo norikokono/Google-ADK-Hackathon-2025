@@ -1,0 +1,41 @@
+.error-boundary {
+  padding: 2rem;
+  text-align: center;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin: 2rem auto;
+  max-width: 600px;
+}
+
+.error-content {
+  margin: 1rem 0;
+}
+
+.error-content h2 {
+  color: #e53e3e;
+  margin-bottom: 1rem;
+}
+
+.error-details {
+  margin: 1.5rem 0;
+  text-align: left;
+  background: #f8fafc;
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.reset-button {
+  padding: 0.75rem 1.5rem;
+  background: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.reset-button:hover {
+  background: #357abd;
+}

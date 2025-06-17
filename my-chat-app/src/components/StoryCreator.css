@@ -1,0 +1,382 @@
+.story-creator {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.creator-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.creator-header h1 {
+  color: #4a90e2;
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.creator-form {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-weight: 500;
+  color: #333;
+}
+
+.form-group select {
+  padding: 0.75rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 1rem;
+  background: white;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.form-group select:hover {
+  border-color: #cbd5e0;
+}
+
+.form-group select:focus {
+  outline: none;
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+}
+
+/* Add to /Users/norikokono/Google-ADK-Hackathon/my-chat-app/src/components/StoryCreator.css */
+
+/* ... existing styles ... */
+
+.preview-section {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  border: 1px solid #eee;
+}
+
+.preview-section h2 {
+  margin-top: 0;
+  color: #333;
+}
+
+.generated-story-section {
+  margin-top: 30px;
+  padding: 20px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.generated-story-section h2 {
+  margin-top: 0;
+  color: #007bff; /* Or your theme color */
+}
+
+.story-content {
+  margin-top: 15px;
+  padding: 10px;
+  background-color: #fdfdfd;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+  line-height: 1.6;
+}
+
+.story-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.qr-code-container {
+  text-align: center;
+}
+
+.qr-code-container h4 {
+  margin-bottom: 5px;
+  font-size: 0.9em;
+  color: #555;
+}
+
+.qr-placeholder {
+  font-size: 0.8em;
+  color: #777;
+  border: 1px dashed #ccc;
+  padding: 10px;
+  display: inline-block;
+  min-width: 100px;
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.download-button {
+  background-color: #28a745; /* Green */
+  color: white;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1em;
+}
+
+.download-button:hover {
+  background-color: #218838;
+}
+
+.download-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.story-error-message {
+  padding: 15px;
+  background-color: #ffebee; /* Light red */
+  border: 1px solid #ef9a9a; /* Reddish border */
+  color: #c62828; /* Dark red text */
+  border-radius: 4px;
+}
+
+.story-error-message h2 {
+  color: #c62828; /* Dark red text */
+  margin-top: 0;
+}
+.create-button {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.create-button:hover {
+  background: #357abd;
+}
+
+.create-button:disabled {
+  background: #cbd5e0;
+  cursor: not-allowed;
+}
+
+.preview-section {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+/* Consistent button sizing */
+.btn {
+  min-width: 180px; /* Set a consistent minimum width */
+  padding: 12px 24px;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  letter-spacing: 0.2px;
+}
+
+.btn:active {
+  transform: scale(0.98);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Primary Button - Create Story */
+.btn-primary {
+  background: linear-gradient(135deg, #4CAF50, #2E7D32);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #43A047, #1B5E20);
+  box-shadow: 0 6px 15px rgba(46, 125, 50, 0.3);
+}
+
+/* Secondary Button - Back to Chat */
+.btn-secondary {
+  background: linear-gradient(135deg, #757F9A, #D7DDE8);
+  color: #e707f2;
+  padding: 8px 16px;
+}
+
+.btn-secondary:hover {
+  background: linear-gradient(135deg, #6e768e, #c9d1de);
+  box-shadow: 0 6px 15px rgba(117, 127, 154, 0.3);
+}
+
+/* Download Button */
+.btn-download {
+  background: linear-gradient(135deg, #007BFF, #0056B3);
+  color: white;
+}
+
+.btn-download:hover {
+  background: linear-gradient(135deg, #0069d9, #004494);
+  box-shadow: 0 6px 15px rgba(0, 123, 255, 0.3);
+}
+
+/* Toggle Button - Show/Hide Guide */
+.btn-toggle {
+  background: linear-gradient(135deg, #f494ba, #b73a96);
+  color: white;
+  padding: 8px 16px;
+}
+
+.btn-toggle:hover {
+  background: linear-gradient(135deg, #f070a3, #f20cb5);
+  box-shadow: 0 6px 15px rgba(156, 39, 176, 0.3);
+}
+
+/* Surprise Button */
+.btn-surprise {
+  background: linear-gradient(135deg, #FF9800, #FF5722);
+  color: white;
+  margin-bottom: 15px;
+}
+
+.btn-surprise:hover {
+  background: linear-gradient(135deg, #FB8C00, #E64A19);
+  box-shadow: 0 6px 15px rgba(255, 87, 34, 0.3);
+}
+
+/* Form buttons layout */
+.form-buttons {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+/* Action buttons in other areas */
+.action-buttons {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+/* Ripple effect */
+.btn .ripple {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  transform: scale(0);
+  animation: ripple 0.6s linear;
+}
+
+@keyframes ripple {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .story-creator {
+    margin: 1rem;
+    padding: 1.5rem;
+  }
+  
+  .creator-header h1 {
+    font-size: 1.5rem;
+    color: #8e24aa;
+  }
+}
+
+/* Random Banner */
+.random-banner {
+  background-color: #FFF9C4;
+  border-radius: 8px;
+  padding: 10px 15px;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.random-banner span {
+  font-size: 20px;
+}
+
+.random-banner p {
+  margin: 0;
+  font-weight: 500;
+}
+
+/* Add to StoryCreator.css */
+@keyframes pulse-select {
+  0% { border-color: #ddd; }
+  50% { border-color: #FF9800; box-shadow: 0 0 8px rgba(255, 152, 0, 0.5); }
+  100% { border-color: #ddd; }
+}
+
+.random-select {
+  animation: pulse-select 1s;
+}
+
+.guide-actions {
+  margin: 25px 0;
+  display: flex;
+  justify-content: center;
+}
+
+.guide-generate-btn {
+  background: linear-gradient(135deg, #cb1196, #25c6fc);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 10px rgba(37, 117, 252, 0.3);
+}
+
+.guide-generate-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(37, 117, 252, 0.4);
+}
+
+.guide-generate-btn:disabled {
+  background: #b3b3b3;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
