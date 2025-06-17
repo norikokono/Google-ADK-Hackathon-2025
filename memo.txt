@@ -10,3 +10,25 @@ Run your backend (multi_tool_agent) so it exposes an API endpoint (e.g., /api/ch
 Run your frontend (my-chat-app) with npm start or yarn start.
 In your React code, make sure the fetch URL matches your backend endpoint.
 If running locally on different ports, use the full URL, e.g.:
+
+
+your_project_root/
+├── multi_tool_agent/
+│   ├── __init__.py          <-- IMPORTANT: This file must exist!
+│   ├── agents/
+│   │   ├── __init__.py      <-- IMPORTANT: This file must exist!
+│   │   └── story.py         <-- Your StoryAgent code is here
+│   └── models/
+│       ├── __init__.py      <-- IMPORTANT: This file must exist!
+│       └── schemas.py       <-- Your ToolRequest, ToolResponse are here
+├── .env                     <-- Your environment variables file
+├── some_main_app.py         <-- (Optional) Your main application entry point
+└── requirements.txt
+
+
+cd /Users/norikokono/Google-ADK-Hackathon
+python -m multi_tool_agent.agents.story
+
+lsof -ti:8000 | xargs kill
+
+

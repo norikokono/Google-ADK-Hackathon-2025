@@ -3,7 +3,7 @@ PlotBuddy Configuration Package
 Contains configuration settings and response templates for all agents.
 """
 
-from .responses import (
+from .response import (
     GREETING_RESPONSES,
     FAQ_RESPONSES,
     STORY_TEMPLATES,

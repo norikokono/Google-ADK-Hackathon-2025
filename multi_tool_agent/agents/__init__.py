@@ -1,15 +1,18 @@
-from .base import PlotBuddyAgent
+"""
+PlotBuddy Agents
+Collection of specialized agents for different tasks.
+"""
+
 from .greeting import GreetingAgent
 from .faq import FAQAgent
 from .profile import ProfileAgent
 from .story import StoryAgent
-from .orchestrator import OrchestratorAgent
+from .manager import ManagerAgent
 
 __all__ = [
-    'PlotBuddyAgent',
-    'GreetingAgent',
-    'FAQAgent',
-    'ProfileAgent',
-    'StoryAgent',
-    'OrchestratorAgent'
+    "GreetingAgent",
+    "FAQAgent",
+    "ProfileAgent",
+    "StoryAgent",
+    "ManagerAgent",
 ]
