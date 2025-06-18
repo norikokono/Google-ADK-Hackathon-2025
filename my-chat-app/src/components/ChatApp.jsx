@@ -173,6 +173,9 @@ const ChatApp = () => {
   // Only ONE return statement per component
   return (
     <div className="chat-app">
+      {/* Floating logo component */}
+      <img src="/assets/images/plotbuddy-text-logo.svg" alt="PlotBuddy" className="floating-logo" />
+      
       {currentView === 'chat' ? (
         <div className="chat-container">
           <header className="chat-header">

@@ -194,11 +194,21 @@ const RandomStory = () => {
         textAlign: 'center',
         marginBottom: '30px'
       }}>
-        <h1 style={{
-          fontSize: '2.5em',
-          color: '#333',
-          marginBottom: '10px'
-        }}>Random Story Generator</h1>
+        <h1
+          style={{
+            fontSize: '2.5em',
+            background: 'linear-gradient(45deg,rgb(241, 248, 24),rgb(14, 70, 174))',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            marginBottom: '10px',
+            textShadow: '1px 1px 3px rgba(198, 46, 181, 0.4)',
+            transition: 'transform 0.3s ease'
+          }}
+          onMouseEnter={(e) => e.target.style.transform = 'scale(1.05)'}
+          onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+        >
+          Random Story Generator
+        </h1>
         <p style={{
           fontSize: '1.2em',
           color: '#555',
@@ -212,10 +222,9 @@ const RandomStory = () => {
         marginBottom: '40px', 
         padding: '20px', 
         borderRadius: '12px', 
-        backgroundColor: '#f0f8ff', 
-        border: '1px solid #b3e0ff' 
+        background: 'linear-gradient(to right,rgb(228, 253, 234),rgb(247, 230, 245))',
       }}>
-        <h2 style={{ fontSize: '1.8em', color: '#007acc', marginBottom: '15px' }}>
+        <h2 style={{ fontSize: '1.8em', color: '#444', marginBottom: '15px' }}>
           Story Creation Guide
         </h2>
         <p style={{ marginBottom: '15px', color: '#333' }}>
@@ -224,7 +233,7 @@ const RandomStory = () => {
         
         {/* Pro Tips section */}
         <section className="pro-tips">
-          <h3 style={{ fontSize: '1.5em', color: '#0056b3', marginBottom: '10px' }}>💡 Pro Tips</h3>
+          <h3 style={{ fontSize: '1.5em', color: '#00b3aa', marginBottom: '10px' }}>💡 Pro Tips</h3>
           <ul style={{ marginLeft: '20px', color: '#333', lineHeight: '1.6' }}>
             <li>Pair classic combinations: <strong>mystery + suspenseful</strong>, <strong>romance + dreamy</strong></li>
             <li>Try contrasts: <strong>cyberpunk + nostalgic</strong>, <strong>historical + whimsical</strong></li>
@@ -252,13 +261,13 @@ const RandomStory = () => {
          <div className="examples-info" style={{
           marginTop: '40px',
           padding: '20px',
-          backgroundColor: '#e6f7ff',
+          background: 'linear-gradient(to right,rgb(239, 249, 241),rgb(194, 246, 215),rgb(198, 239, 230))',
           borderRadius: '10px',
-          border: '1px solid #91d5ff'
+          border: '1px solidrgb(244, 163, 232)'
         }}>
           <h3 style={{
             fontSize: '1.4em',
-            color: '#0056b3',
+            color: '#078587',
             marginBottom: '10px'
           }}>
             About Random Stories

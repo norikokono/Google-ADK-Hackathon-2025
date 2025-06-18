@@ -38,7 +38,7 @@ const NavBar = () => {
         <img src="/assets/images/plotbuddy-navbar-logo.svg" alt="PlotBuddy" />
       </Link>
       <Link to="/" className="nav-logo-name" onClick={closeMenu}>
-        <img src="/assets/images/plotbuddy-navbar.svg" alt="PlotBuddy" />
+        <img src="/assets/images/plotbuddy-text-logo.svg" alt="PlotBuddy" />
       </Link>
       <button 
         className="nav-menu-button" 

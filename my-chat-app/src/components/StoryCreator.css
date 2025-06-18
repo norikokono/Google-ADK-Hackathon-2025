@@ -13,9 +13,12 @@
 }
 
 .creator-header h1 {
-  color: #4a90e2;
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
+  color: #e24ac6;
+  font-size: 2.5rem; /* Increased for better emphasis */
+  font-weight: bold; /* Adds more presence */
+  text-align: center; /* Centers the header */
+  margin-bottom: 1rem; /* Adds a bit more spacing */
+  text-shadow: 2px 2px 4px rgba(226, 74, 198, 0.3); /* Subtle shadow for depth */
 }
 
 .creator-form {
@@ -81,7 +84,7 @@
 
 .generated-story-section h2 {
   margin-top: 0;
-  color: #007bff; /* Or your theme color */
+  color: #d179cb; /* Or your theme color */
 }
 
 .story-content {
@@ -127,7 +130,7 @@
 }
 
 .download-button {
-  background-color: #28a745; /* Green */
+  background-color: #07e8ca; /* Green */
   color: white;
   padding: 10px 15px;
   border: none;
@@ -137,7 +140,7 @@
 }
 
 .download-button:hover {
-  background-color: #218838;
+  background-color: #037d6d;
 }
 
 .download-button:disabled {
@@ -220,6 +223,24 @@
 .btn-primary {
   background: linear-gradient(135deg, #4CAF50, #2E7D32);
   color: white;
+}
+
+/* Loading Spinner for Buttons */
+.btn .spinner {
+  border: 3px solid #e0e0e0;
+  border-top: 3px solid #fff;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: btn-spin 0.8s linear infinite;
+  margin-right: 8px;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+@keyframes btn-spin {
+  0% { transform: rotate(0deg);}
+  100% { transform: rotate(360deg);}
 }
 
 .btn-primary:hover {
@@ -380,3 +401,105 @@
   box-shadow: none;
 }
 
+/* Profile Agent Speech Bubble */
+.profile-agent-bubble {
+  display: flex;
+  align-items: flex-start;
+  margin: 1rem 0 2rem 0;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.speech-bubble {
+  position: relative;
+  background-color: white;
+  border-radius: 18px;
+  padding: 16px 20px;
+  max-width: calc(100% - 70px);
+  box-shadow: 0 3px 12px rgba(0, 128, 128, 0.15);
+  border-top-left-radius: 4px;
+  border: 1px solid rgba(0, 128, 128, 0.2);
+}
+
+.speech-bubble::before {
+  content: "";
+  position: absolute;
+  top: 15px;
+  left: -10px;
+  width: 20px;
+  height: 20px;
+  background-color: white;
+  transform: rotate(45deg);
+  border-left: 1px solid rgba(0, 128, 128, 0.2);
+  border-bottom: 1px solid rgba(0, 128, 128, 0.2);
+}
+
+.speech-bubble p {
+  margin: 0;
+  color: var(--text-on-light);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.speech-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+  gap: 8px;
+}
+
+.speech-action-btn {
+  background-color: transparent;
+  border: 1px solid var(--primary-color);
+  color: var(--primary-color);
+  border-radius: 15px;
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.speech-action-btn:hover {
+  background-color: var(--primary-light);
+  color: white;
+}
+
+.speech-action-btn i {
+  font-size: 0.9rem;
+}
+
+/* Animation for the speech bubble */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .speech-bubble {
+    background-color: #192121;
+    border-color: rgba(0, 128, 128, 0.3);
+  }
+  
+  .speech-bubble::before {
+    background-color: #192121;
+    border-left-color: rgba(0, 128, 128, 0.3);
+    border-bottom-color: rgba(0, 128, 128, 0.3);
+  }
+}
+
+  .profile-agent-avatar{
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    margin-right: 10px;
+    flex-shrink: 0;
+    background-color: #e0f7fa; /* Light blue background */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: #00796b; /* Darker blue for contrast */
+  }

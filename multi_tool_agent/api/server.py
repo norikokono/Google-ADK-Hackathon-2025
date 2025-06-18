@@ -26,6 +26,7 @@ else:
 # Import your agent
 from ..agents.story import StoryAgent
 from ..models.schemas import ToolRequest, ToolResponse
+from ..agents.profile import ProfileAgent  # New import
 
 app = FastAPI()
 
@@ -39,6 +40,7 @@ app.add_middleware(
 )
 
 story_agent = StoryAgent()
+profile_agent = ProfileAgent(model_name="gemini-1.5-flash")  # Ensure profile agent is initialized
 
 class StoryRequest(BaseModel):
     user_id: str
@@ -203,6 +205,54 @@ async def debug_greeting():
     request = ToolRequest(user_id="test_user", input="hi")
     response = agent.process(request)
     return {"success": response.success, "output": response.output, "message": response.message}
+
+@app.post("/api/profile/brainstorm")
+async def profile_brainstorm(request: Request):
+    """Endpoint for brainstorming ideas with the profile agent."""
+    try:
+        data = await request.json()
+        genre = data.get('genre', '')
+        mood = data.get('mood', '')
+        length = data.get('length', '')
+        
+        # Create a request object for the profile agent
+        tool_request = ToolRequest(
+            input=f"I need brainstorming help for a {mood} {genre} story of {length} length",
+            user_id=data.get('userId', 'anonymous'),
+            context={"brainstorm": True, "genre": genre, "mood": mood, "length": length}
+        )
+        
+        # Process with profile agent
+        response = profile_agent.process(tool_request)
+        
+        return {"success": response.success, "output": response.output}
+    except Exception as e:
+        logger.exception(f"Error in profile brainstorming: {e}")
+        return {"success": False, "output": "Sorry, I encountered an error while brainstorming."}
+
+@app.post("/api/profile/advice")
+async def profile_advice(request: Request):
+    """Endpoint for getting contextual advice from the profile agent."""
+    try:
+        data = await request.json()
+        context = data.get('context', '')
+        genre = data.get('genre', '')
+        mood = data.get('mood', '')
+        
+        # Create a request object for the profile agent
+        tool_request = ToolRequest(
+            input=f"Give me advice about creating a {mood} {genre} story",
+            user_id=data.get('userId', 'anonymous'),
+            context={"advice": True, "context": context, "genre": genre, "mood": mood}
+        )
+        
+        # Process with profile agent
+        response = profile_agent.process(tool_request)
+        
+        return {"success": response.success, "output": response.output}
+    except Exception as e:
+        logger.exception(f"Error in profile advice: {e}")
+        return {"success": False, "output": "Sorry, I encountered an error while providing advice."}
 
 def main():
     import uvicorn

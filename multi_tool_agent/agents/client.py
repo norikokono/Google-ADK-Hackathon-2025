@@ -19,19 +19,27 @@ else:
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
-    user_message = request.json.get('input')
-    user_id = request.json.get('user_id', 'anonymous_user')
+    try:
+        user_message = request.json.get('input')
+        user_id = request.json.get('user_id', 'anonymous_user')
+        logger.info(f"Received message from {user_id}: {user_message}")
 
-    logger.info(f"Received message from {user_id}: {user_message}")
+        # Call your agent manager here, e.g.:
+        # response = manager.process_message(user_id, ToolRequest(user_id=user_id, input=user_message))
+        # return jsonify({"output": response.output, "success": response.success})
 
-    # Here you would add the logic to handle the message,
-    # interact with the LLM, and generate a response.
-    response_message = "This is the bot's response message"
-
-    return jsonify({
-        "output": response_message,
-        "success": True
-    })
+        # TEMP: Dummy response for debugging
+        response_message = "This is the bot's response message"
+        return jsonify({
+            "output": response_message,
+            "success": True
+        })
+    except Exception as e:
+        logger.exception("Error in /api/chat endpoint")
+        return jsonify({
+            "output": f"Server error: {str(e)}",
+            "success": False
+        }), 500
 
 if __name__ == '__main__':
     app.run(debug=True)

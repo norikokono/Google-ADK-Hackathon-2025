@@ -7,10 +7,11 @@ import logging
 # Set to INFO level to silence DEBUG messages
 logging.getLogger(__name__).setLevel(logging.INFO)
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, ClassVar
 import google.generativeai as genai
+import re
 
-from ..models.schemas import ToolRequest, ToolResponse, StoryParameters
+from ..models.schemas import ToolRequest, ToolResponse
 from google.adk.agents import LlmAgent
 
 logger = logging.getLogger(__name__)
@@ -30,6 +31,14 @@ class StoryAgent(LlmAgent):
     An AI-powered agent that crafts unique fictional stories based on user-defined parameters.
     It leverages an LlmAgent for generation, validates inputs, and handles common LLM errors.
     """
+
+    # Define story length categories with word counts and reading times
+    STORY_LENGTHS: ClassVar[Dict[str, Dict[str, Any]]] = {
+        "micro": {"words": 100, "read_time": "2-3 min"},
+        "short": {"words": 500, "read_time": "5-7 min"},
+        "medium": {"words": 1000, "read_time": "10-12 min"},
+        "long": {"words": 2000, "read_time": "15-20 min"}
+    }
 
     def __init__(self, model_name: str = "gemini-2.0-flash"):
         super().__init__(
@@ -274,17 +283,27 @@ You can say: "Create a mysterious sci-fi micro story" or use the story creation 
         )
 
         # Create a detailed prompt for better quality stories
-        prompt = f"""Write a {mood} {genre} story that is {length_description}
-    
-    Your story should:
-    - Have a compelling {mood} atmosphere throughout
-    - Follow {genre} genre conventions
-    - Include well-developed characters
-    - Have a clear beginning, middle, and end
-    - Be creative and original
-    
-    Remember: Do NOT include a title. Start directly with the story text.
-    """
+        prompt = (
+            f"As a master storyteller, craft an original, professional-quality {genre} story "
+            f"that radiates a distinctly {mood} mood and is {length_description}.\n\n"
+            "Guidelines:\n"
+            "- Immerse the reader in a vivid, atmospheric setting that exemplifies the chosen mood.\n"
+            "- Adhere to the conventions and expectations of the {genre} genre, but avoid clichés—strive for creativity and uniqueness.\n"
+            "- Develop memorable, nuanced characters with clear motivations.\n"
+            "- Structure the narrative with a strong beginning, engaging middle, and satisfying conclusion.\n"
+            "- Employ evocative language, sensory details, and natural dialogue to bring the story to life.\n"
+            "- Ensure the story is suitable for a general audience.\n"
+            "- Avoid any explicit content, profanity, or sensitive themes.\n"
+            "- Focus on storytelling rather than exposition or moralizing.\n"
+            "- Keep the story concise and engaging, avoiding unnecessary tangents or filler.\n"
+            "- Use a consistent tone that matches the mood and genre throughout the story.\n"
+            "- Ensure the story is original and not derivative of existing works.\n"
+            "- Do not include any titles, author names, or introductory remarks.\n"
+            "- The story should be self-contained and not require any additional context or explanation.\n"     
+            f"- Target length: {length_description}.\n"
+            "\n"
+            "Important: Do NOT include a title or any introductory or closing remarks. Begin immediately with the story text."
+        )
     
         # Check if API key is configured
         api_key = os.environ.get("GOOGLE_GENERATIVE_AI_API_KEY")
@@ -337,3 +356,180 @@ You can say: "Create a mysterious sci-fi micro story" or use the story creation 
         return fallbacks.get(genre.lower(), 
             "The story begins in your imagination. While our AI storyteller takes a short break, "
             "perhaps you can start crafting your own tale? We'll be back online shortly.")
+    
+    def _extract_story_parameters(self, message: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract story parameters from the user's message and context."""
+        params = {}
+        
+        # First, use any parameters already in the context
+        for param in ["genre", "mood", "style", "length", "theme", "characters"]:
+            if param in context:
+                params[param] = context[param]
+        
+        # Then, try to extract from the message if not already set
+        # Extract length
+        if "length" not in params:
+            length_patterns = {
+                r"\b(?:micro|tiny|very short|super short|brief|minimal)\b": "micro",
+                r"\b(?:short|quick|small)\b": "short",
+                r"\b(?:medium|moderate|average)\b": "medium",
+                r"\b(?:long|extended|detailed|comprehensive|thorough)\b": "long"
+            }
+            
+            for pattern, length in length_patterns.items():
+                if re.search(pattern, message.lower()):
+                    params["length"] = length
+                    break
+        
+        # Extract genre if not already set
+        if "genre" not in params:
+            common_genres = [
+                "fantasy", "sci-fi", "science fiction", "mystery", "thriller", 
+                "romance", "horror", "historical", "adventure", "comedy",
+                "drama", "dystopian", "young adult", "fairy tale", "fable"
+            ]
+            
+            for genre in common_genres:
+                if genre.lower() in message.lower():
+                    params["genre"] = genre
+                    break
+        
+        # Extract mood if not already set
+        if "mood" not in params:
+            common_moods = [
+                "suspenseful", "uplifting", "dark", "whimsical", "thoughtful", 
+                "mysterious", "romantic", "action-packed", "melancholy", "humorous",
+                "eerie", "nostalgic", "tense", "inspirational", "peaceful"
+            ]
+            
+            for mood in common_moods:
+                if mood.lower() in message.lower():
+                    params["mood"] = mood
+                    break
+        
+        return params
+
+    def _is_story_generation_request(self, message: str) -> bool:
+        """Determine if the message is requesting story generation."""
+        generation_patterns = [
+            r"\b(?:generate|create|write|make|give me|produce)\b.+\b(?:story|tale|narrative)\b",
+            r"\b(?:tell|write)\b.+\b(?:story|tale|narrative)\b.+\b(?:about|with|featuring)\b",
+            r"\b(?:can you|could you|please|would you)\b.+\b(?:write|create)\b.+\b(?:story)\b"
+        ]
+        
+        for pattern in generation_patterns:
+            if re.search(pattern, message.lower()):
+                return True
+                
+        return False
+
+    def _provide_story_guidance(self, user_id: str, message: str, params: Dict[str, Any]) -> ToolResponse:
+        """Provide guidance on story creation."""
+        # Extract any specific guidance areas from message
+        guidance_areas = []
+        
+        guidance_keywords = {
+            "character": "character development",
+            "plot": "plot structure",
+            "setting": "world-building",
+            "dialogue": "dialogue writing",
+            "pacing": "narrative pacing",
+            "ending": "creating satisfying endings",
+            "beginning": "crafting engaging openings"
+        }
+        
+        for keyword, area in guidance_keywords.items():
+            if keyword in message.lower():
+                guidance_areas.append(area)
+        
+        # Default to general guidance if no specific areas found
+        if not guidance_areas:
+            guidance_areas = ["general story structure"]
+        
+        # Get length if specified
+        length = params.get("length", "")
+        length_guidance = ""
+        
+        if length in self.STORY_LENGTHS:
+            word_count = self.STORY_LENGTHS[length]["words"]
+            read_time = self.STORY_LENGTHS[length]["read_time"]
+            
+            length_guidance = f"""
+            For {length} stories (~{word_count} words, {read_time} reading time):
+            
+            - Structure: {self._get_length_structure_guidance(length)}
+            - Character development: {self._get_length_character_guidance(length)}
+            - Pacing: {self._get_length_pacing_guidance(length)}
+            """
+        
+        try:
+            # Create guidance prompt
+            prompt = f"""
+            Provide clear, practical guidance on {', '.join(guidance_areas)} for story creation.
+            
+            User message: {message}
+            
+            {length_guidance}
+            
+            Include:
+            1. 3-4 specific, actionable techniques
+            2. Examples to illustrate key points
+            3. Common pitfalls to avoid
+            
+            Focus on practical advice that can be immediately applied.
+            """
+            
+            # Generate guidance
+            model = genai.GenerativeModel(self.model_name)
+            response = model.generate_content(prompt)
+            guidance = response.text.strip()
+            
+            return ToolResponse(
+                success=True,
+                output=guidance
+            )
+            
+        except Exception as e:
+            logger.error(f"Error providing story guidance: {e}")
+            return ToolResponse(
+                success=False,
+                output=f"I apologize, but I encountered an issue while creating guidance on {', '.join(guidance_areas)}. Would you like to try a different topic?",
+                message=f"Error providing story guidance: {str(e)}"
+            )
+
+    def _get_length_structure_guidance(self, length: str) -> str:
+        """Get structure guidance specific to story length."""
+        guidance = {
+            "micro": "Focus on a single moment or scene with maximum impact. Use a clear setup and meaningful conclusion.",
+            "short": "Include a clear beginning, one or two complications, and a resolution. Focus on a single plotline.",
+            "medium": "Develop a main plot with 1-2 smaller subplots. Structure with clear introduction, rising action, climax and resolution.",
+            "long": "Balance multiple plot elements with a strong central arc. Include deeper character development and more complex narrative structure."
+        }
+        
+        return guidance.get(length, "")
+
+    def _get_length_character_guidance(self, length: str) -> str:
+        """Get character development guidance specific to story length."""
+        guidance = {
+            "micro": "Limit to 1-2 characters, revealed through specific actions or details rather than description.",
+            "short": "Focus on 2-3 key characters with one primary trait each, revealed through action and dialogue.",
+            "medium": "Develop 3-5 characters with multiple traits and motivations. Include character arcs for main characters.",
+            "long": "Create deeper character backgrounds, internal conflicts, and evolving relationships. Support main characters with secondary characters."
+        }
+        
+        return guidance.get(length, "")
+
+    def _get_length_pacing_guidance(self, length: str) -> str:
+        """Get pacing guidance specific to story length."""
+        guidance = {
+            "micro": "Every word must serve the story. Use rapid pacing with immediate narrative hooks and tight conclusion.",
+            "short": "Quick introduction, limited exposition, and efficient movement to the main conflict and resolution.",
+            "medium": "Balance action with reflection. Include 2-3 key plot developments before the climax.",
+            "long": "Vary pacing throughout, with multiple rises and falls in tension. Include moments of action, reflection, character development, and world building."
+        }
+        
+        return guidance.get(length, "")
+
+    def get_story_length_options(self) -> Dict[str, Dict[str, Any]]:
+        """Return all story length options with their details."""
+        return self.STORY_LENGTHS

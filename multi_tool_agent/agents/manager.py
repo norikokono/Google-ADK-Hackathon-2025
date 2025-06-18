@@ -6,6 +6,7 @@ Centralizes agent initialization and coordination
 import logging
 from typing import Optional, Dict, Any, Union
 import google.generativeai as genai
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -37,16 +38,34 @@ class ManagerAgent:
     """
     Manages the initialization and routing of messages to different PlotBuddy agents.
     """
-    def __init__(self):
+    def __init__(self, model_name="gemini-2.0-pro"):
         """
         Initializes all the individual PlotBuddy agents.
         """
-        self.greeting_agent = GreetingAgent(model_name="gemini-2.0-flash")
-        self.faq_agent = FAQAgent(model_name="gemini-2.0-flash")
-        self.profile_agent = ProfileAgent(model_name="gemini-2.0-flash")
-        self.story_agent = StoryAgent(model_name="gemini-2.0-flash")
+        self.model_name = model_name
+        logger.info(f"ManagerAgent initialized with model: {model_name}")
+        
+        # Initialize specialized agents - keep these on 1.5
+        self.greeting_agent = GreetingAgent("gemini-1.5-flash")
+        self.faq_agent = FAQAgent("gemini-1.5-flash")
+        self.profile_agent = ProfileAgent("gemini-2.0-flash")
+        self.story_agent = StoryAgent("gemini-1.5-flash")
+        
+        # Set default agent for initial interactions
         self.default_agent = self.greeting_agent
         logger.info("ManagerAgent initialized with all sub-agents")
+
+        # Example of potential Gemini 2.0 specific configuration
+        generation_config = {
+            "temperature": 0.7,
+            "top_p": 0.95,
+            "top_k": 40,
+        }
+
+        model = genai.GenerativeModel(
+            self.model_name,
+            generation_config=generation_config
+        )
 
     def _route_message(self, request: ToolRequest) -> Any:
         """Route the message to the appropriate agent."""
@@ -131,6 +150,69 @@ class ManagerAgent:
         request.context["last_agent_response"] = response.output
         
         return response
+
+    # Update in manager.py to avoid misinterpreting app questions as story requests
+    def _detect_story_creation_intent(self, message: str, history: Dict[str, Any]) -> bool:
+        """Detect if the user is intending to create or work on a story."""
+        # Before checking story patterns, make sure this isn't about the app itself
+        faq_indicators = [
+            r"\b(?:plotbuddy|plot buddy|app|application|tool|platform|website)\b.*\b(?:use|using|work|help|question)\b",
+            r"\b(?:how to|how do I|can I).*\b(?:plotbuddy|plot buddy|app|this)\b",
+            r"\b(?:feature|function|button|menu|option)\b"
+        ]
+        
+        # If it's clearly about the app, not a story, return False
+        for pattern in faq_indicators:
+            if re.search(pattern, message.lower()):
+                return False
+        
+        # Check for explicit story creation keywords
+        story_creation_patterns = [
+            r"\b(?:create|make|write|start|build|develop) (?:a|the|my) (?:story|narrative|tale|novel|book)\b",
+            r"\b(?:story idea|plot line|character development|setting|world ?building)\b",
+            r"\b(?:protagonist|antagonist|hero|villain|conflict|resolution)\b",
+            r"\bmy (?:story|book|novel|writing|manuscript)\b"
+        ]
+        
+        for pattern in story_creation_patterns:
+            if re.search(pattern, message.lower()):
+                return True
+                
+        # Check if there's existing story context in user history
+        if history.get("story_context") and len(history["story_context"]) > 0:
+            # If they were already working on a story, likely still are
+            return True
+            
+        return False
+
+    # Update in manager.py's _determine_best_agent method to prioritize FAQ for app questions
+    def _determine_best_agent(self, message: str, context: Dict[str, Any], history: Dict[str, Any]) -> str:
+        try:
+            # Check for FAQ patterns first - prioritize these for app-related questions
+            faq_patterns = [
+                r"\b(?:how do I|how to|what is|can I|does this|is there)\b",
+                r"\b(?:faq|question|help|guide|tutorial)\b",
+                r"\b(?:plotbuddy|plot buddy|app|application|tool|platform)\b",
+                r"\?$"  # Ends with question mark
+            ]
+            
+            # If user is asking about the application itself, prefer FAQ agent
+            for pattern in faq_patterns:
+                if re.search(pattern, message.lower()):
+                    # Extra check for app-specific terms to strongly favor FAQ agent
+                    app_terms = ["plotbuddy", "plot buddy", "app", "application", "feature", "using"]
+                    if any(term in message.lower() for term in app_terms):
+                        logger.info("Detected application usage question, routing to FAQ agent")
+                        return "faq"
+            
+            # Then check for story-related content if it's not an app question
+            if self._detect_story_creation_intent(message, history):
+                return "story"
+                
+            # Rest of the method remains the same...
+        except Exception as e:
+            logger.error(f"Error in _determine_best_agent: {e}")
+            return "faq"  # Fallback to FAQ agent on error
 
 # Singleton instance
 manager = ManagerAgent()

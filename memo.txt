@@ -26,9 +26,8 @@ your_project_root/
 └── requirements.txt
 
 
-cd /Users/norikokono/Google-ADK-Hackathon
-python -m multi_tool_agent.agents.story
+python -m multi_tool_agent.api.server
+
+python test_story.py
 
 lsof -ti:8000 | xargs kill
-
-

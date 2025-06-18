@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import StoryGuide from './StoryGuide';
 import './StoryCreator.css';
 
+
 const StoryCreator = ({ onCreateStory, onBackToChat }) => {
   const [storyConfig, setStoryConfig] = useState({
     genre: '',
@@ -13,6 +14,8 @@ const StoryCreator = ({ onCreateStory, onBackToChat }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showGuide, setShowGuide] = useState(true);
+  const [profileAgentMessage, setProfileAgentMessage] = useState('');
+  const [showSpeechBubble, setShowSpeechBubble] = useState(true);
 
   const genres = [
     { value: 'mystery', label: 'Mystery - Detective stories and puzzles' },
@@ -135,7 +138,8 @@ const StoryCreator = ({ onCreateStory, onBackToChat }) => {
   };
 
   const handleSubmit = (e) => {
-    e.preventDefault();
+    e.preventDefault();    
+    
     createStory();
   };
 
@@ -168,6 +172,62 @@ const StoryCreator = ({ onCreateStory, onBackToChat }) => {
     button.appendChild(circle);
   };
 
+  // Function to fetch profile agent message
+  const fetchProfileAgentMessage = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/api/profile/advice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          context: 'story_creation',
+          genre: storyConfig.genre,
+          mood: storyConfig.mood
+        })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        setProfileAgentMessage(data.output);
+      }
+    } catch (error) {
+      console.error("Failed to fetch profile agent message:", error);
+    }
+  };
+
+  // Function to request story brainstorming ideas
+  const requestBrainstorming = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/api/profile/brainstorm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          genre: storyConfig.genre,
+          mood: storyConfig.mood,
+          length: storyConfig.length
+        })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        setProfileAgentMessage(data.output);
+      }
+    } catch (error) {
+      console.error("Failed to start brainstorming:", error);
+    }
+  };
+
+  // Toggle the visibility of the speech bubble
+  const toggleSpeechBubble = () => {
+    setShowSpeechBubble(!showSpeechBubble);
+  };
+
+  // Fetch profile agent message when form values change
+  useEffect(() => {
+    if (showSpeechBubble) {
+      fetchProfileAgentMessage();
+    }
+  }, [storyConfig.genre, storyConfig.mood, storyConfig.length, showSpeechBubble]);
+
   return (
     <div className="story-creator">
       {/* Creator header buttons */}
@@ -194,6 +254,28 @@ const StoryCreator = ({ onCreateStory, onBackToChat }) => {
           </button>
         </div>
       </div>
+
+      {/* Profile agent bubble - Welcome message and actions */}
+      {showSpeechBubble && (
+        <div className="profile-agent-bubble">
+          <div className="profile-agent-avatar">
+            <img src="../assets/images/plotbuddy-logo.svg" alt="PlotBuddy logo" />
+          </div>
+          <div className="speech-bubble">
+            <p id="profile-agent-message">
+              {profileAgentMessage || "Welcome to Story Creator! What kind of story would you like to create today? I'm here to help with ideas and suggestions."}
+            </p>
+            <div className="speech-actions">
+              <button className="speech-action-btn" onClick={requestBrainstorming}>
+                <i className="fa fa-lightbulb-o"></i> PlotBuddy Support 💗
+              </button>
+              <button className="speech-action-btn" onClick={toggleSpeechBubble}>
+                <i className="fa fa-times"></i>Close ❎
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       <div className="creator-content">
         {showGuide && (
@@ -206,7 +288,8 @@ const StoryCreator = ({ onCreateStory, onBackToChat }) => {
           <header className="creator-header" style={{ marginBottom: '30px' }}>
             <h1 style={{
               fontSize: '2.5em',
-              color: '#333',
+              color: '#1d9692',
+              marginTop: '36px',
               marginBottom: '10px',
               fontWeight: '700'
             }}>
@@ -494,8 +577,14 @@ const StoryCreator = ({ onCreateStory, onBackToChat }) => {
           )}
         </div>
       </div>
-    </div>
+
+        {/* Remove the <style jsx> block; add keyframes to StoryCreator.css if needed */}
+      </div>
   );
+};
+
+const FloatingLogo = () => {
+  return <img src="../../public/assets/images/plotbuddy-logo.svg" alt="PlotBuddy" className="floating-logo" />;
 };
 
 StoryCreator.propTypes = {

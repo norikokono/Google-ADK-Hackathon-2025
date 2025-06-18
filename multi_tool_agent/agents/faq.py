@@ -1,6 +1,7 @@
 import logging
 from typing import Dict, Callable, Any, List, Optional
 from pydantic import PrivateAttr
+import re
 
 from ..models.schemas import ToolRequest, ToolResponse
 from google.adk.agents import LlmAgent
@@ -66,16 +67,29 @@ class FAQAgent(LlmAgent):
                 "keywords": ["how it works", "how does it work", "process", "explain", "details", 
                             "steps", "guide me", "tutorial", "instructions", "workflow"],
                 "response_key": "HOW_IT_WORKS_MESSAGE"
+            },
+            "using_plotbuddy": {
+                "keywords": ["how to use plotbuddy", "using plotbuddy", "plotbuddy guide", "navigating plotbuddy"],
+                "response_key": "USING_PLOTBUDDY_MESSAGE"
             }
         }
 
         # Keywords for detecting story creation intent
         self._story_intent_keywords = [
             "let's start", "i'm ready", "create story", "write story", "make story",
-            "start writing", "begin story", "let's write", "ok", "okay", "sure",
-            "let's do it", "sounds good", "ready", "i want to try", "i am ready",
-            "redy", "im ready", "i think i am ready", "i think im ready", "good to go",
-            "start a story", "begin a story", "write me a story",
+            "start writing", "begin story", "let's write", "write a story", "generate story",
+            "new story", "story idea", "plot", "narrative", "story prompt", "story generation",
+            "story creation", "story writing", "story prompt", "story concept", "create a story",
+            "write a plot", "write a narrative", "write a story idea", "write a story prompt",
+            "write a story concept", "i want to create a story", "i want to write a story",
+            "i want to generate a story", "i want to make a story", "i want to start a story",
+            "i want to write", "i want to create", "i want to generate", "i want to make",
+            "i want to begin", "i want to start", "i want to write a plot", "i want to write a narrative",
+            "i want to write a story idea", "i want to write a story prompt", "i want to write a story concept",
+            "let's create a story", "let's write a story", "let's generate a story", "let's make a story",
+            "let's start a story", "let's write a plot", "let's write a narrative",
+            "let's do it","ready", "i want to try", "i am ready", "redy", "im ready", "i think i am ready", "i think im ready", 
+            "good to go", "start a story", "begin a story", "write me a story",
             
             # Add new keywords for examples
             "example", "sample", "show me", "give me an example", "give me a sample", 
@@ -93,7 +107,7 @@ class FAQAgent(LlmAgent):
         logger.info("FAQAgent initialized.")
 
     def process(self, request: ToolRequest) -> ToolResponse:
-        """Handles incoming tool requests for FAQ queries."""
+        """Process an FAQ request with intelligent intent detection."""
         logger.debug(f"FAQAgent processing request for user {request.user_id} with input: {request.input}")
 
         # Add more detailed logging
@@ -200,25 +214,67 @@ class FAQAgent(LlmAgent):
     def _construct_ai_prompt(self, user_query: str) -> str:
         """Constructs the prompt for the generative AI model."""
         return f"""You are PlotBuddy, a helpful and friendly AI storytelling assistant.
-Your main goal is to assist users with common questions about PlotBuddy or guide them towards creating stories.
+    Your main goal is to assist users with common questions about PlotBuddy or guide them towards creating stories.
+    to assist users with common questions about PlotBuddy or guide them towards creating stories.
 
-Based on the following user query, provide a concise and direct answer.
+    You're a polite, empathetic, and knowledgeable assistant.
+    Greet customers warmly and address them directly.
+    Listen carefully, ask clarifying questions when needed, and validate their concerns.
+    Use clear, simple language and avoid overly technical terms.
+    If an issue is complex, explain the next steps clearly.
+    Always summarize your solutions and invite follow-up questions to ensure complete satisfaction.
+    Make sure to provide concise and direct answers and avoid unnecessary repetition.
 
-Here is the user's query: "{user_query}"
+    Based on the following user query, provide a concise and direct answer.
 
-IMPORTANT RULES:
-- Be conversational and directly address the user.
-- Do NOT explicitly mention "AI", "model", or "I am an AI".
-- Do NOT ask follow-up questions unless absolutely necessary.
-- Keep your response under 100 words.
-- Avoid starting every response with greetings like "Hey there!", "Hi!", "Hello", etc.
-- Only use a greeting in the very first message of a conversation, not in follow-up responses.
-- If the query mentions "support", "contact", "login issues", "account" or any request to speak with someone, ALWAYS respond with contact information.
-- For support and contact requests, direct them to email support@plotbuddy.ai or visit help.plotbuddy.ai
-- If the query is about a feature PlotBuddy does not have, gently explain that feature is not available and suggest alternatives.
+    Here is the user's query: "{user_query}"
 
-Now, respond to the user's query:
-"""
+    IMPORTANT RULES:
+    - Be conversational and directly address the user.
+    - Do NOT explicitly mention "AI", "model", or "I am an AI".
+    - Keep your response under 100 words.
+    - IMPORTANT: Avoid starting every response with greetings like "Hey there!", "Hi!", "Hello", etc.
+    - IMPORTANT: Only use a greeting in the very first message of a conversation, not in follow-up responses.
+    - If the query mentions "support", "contact", "login issues", "account" or any request to speak with someone, ALWAYS respond with contact information.
+    - For support and contact requests, direct them to email support@plotbuddy.ai or visit help.plotbuddy.ai
+    - If the query is about a feature PlotBuddy does not have, gently explain that feature is not available and suggest alternatives.
+
+    Now, respond to the user's query:
+    """
+
+    # Update the FAQ agent's pattern matching in faq.py
+    def _is_faq_question(self, message: str) -> bool:
+        """Determine if a message is an FAQ question."""
+        # Add more robust application-specific keywords
+        app_keywords = [
+            r"\b(?:plotbuddy|plot buddy|app|application|tool|platform|website|site)\b",
+            r"\b(?:how to use|using|work with|navigate|access|feature|function)\b",
+            r"\b(?:account|profile|settings|preferences|login|signup|register)\b",
+            r"\b(?:save|export|import|share|download|upload)\b",
+        ]
+        
+        # Check for application keywords combined with question patterns
+        question_patterns = [
+            r"\b(?:how do I|how to|how can I|what is|can I|does|is there|where is)\b",
+            r"\b(?:help|question|faq|guide|tutorial|documentation|support)\b",
+            r"\?$"  # Ends with question mark
+        ]
+        
+        # First check: if mentions our app name directly with a question, it's almost certainly FAQ
+        for app_term in [r"\b(?:plotbuddy|plot buddy)\b"]:
+            if re.search(app_term, message.lower()):
+                for q_pattern in question_patterns:
+                    if re.search(q_pattern, message.lower()):
+                        return True
+        
+        # Second check: other app-related terms with questions
+        for app_term in app_keywords:
+            if re.search(app_term, message.lower()):
+                for q_pattern in question_patterns:
+                    if re.search(q_pattern, message.lower()):
+                        return True
+        
+        return False
 
 # --- Static Responses (Moved to multi_tool_agent.config.response.py or similar) ---
 # For demonstration purposes, including them here as a dictionary.
@@ -243,102 +299,128 @@ Now, respond to the user's query:
 FAQ_RESPONSES = {
     "HELP_MESSAGE": (
         "🚀 **Welcome to PlotBuddy Help!**\n\n"
-        "Here's how I can help you today:\n"
-        "--- **General Commands** ---\n"
-        "  • Type `help` to see this message again.\n"
-        "  • Ask `how it works` to understand my creative process.\n"
-        "  • Say `contact support` for help or feedback.\n\n"
-        "--- **Story Creation** ---\n"
-        "  • Ask `what genres` are available to get inspired.\n"
-        "  • To start a story, tell me `create story` or `write a story` (then specify genre, mood, and length!).\n\n"
-        "--- **Account & Pricing** ---\n"
-        "  • Ask `what are your prices` or `subscription plans`.\n"
-        "  • Query `business hours` for support availability.\n\n"
-        "**💡 Tip:** Try being specific! For example: 'Create a short sci-fi story with a mysterious mood.'\n"
-        "I'm here to bring your ideas to life!"
+        "Here's what I can help you with:\n"
+        "— **General Commands:**\n"
+        "  • Type `help` to see this menu again.\n"
+        "  • Ask `how it works` for a quick overview.\n"
+        "  • Say `contact support` for assistance or feedback.\n\n"
+        "— **Story Creation:**\n"
+        "  • Ask `what genres` to explore story types.\n"
+        "  • To start, just say `create story` or `write a story` (then pick genre, mood, and length!).\n\n"
+        "— **Account & Pricing:**\n"
+        "  • Ask about `pricing` or `subscription plans`.\n"
+        "  • Query `business hours` for support times.\n\n"
+        "**💡 Tip:** Be specific! For example: 'Create a short sci-fi story with a mysterious mood.'\n"
+        "I'm here to help you bring your ideas to life!"
     ),
     "PRICING_MESSAGE": (
         "💰 **PlotBuddy Pricing & Plans** 💰\n\n"
-        "--- **Individual Story Packs** ---\n"
-        "  • **1 Story Credit:** $4.99\n"
-        "  • **5 Story Credits:** $19.99 (Save 20%)\n"
-        "  • **10 Story Credits:** $34.99 (Save 30%)\n\n"
-        "--- **Subscription Tiers (Best Value!)** ---\n"
-        "  • **Bronze (5 stories/month):** $17.99/month\n"
-        "  • **Silver (20 stories/quarter):** $67.99/quarter (equivalent to ~$16.99/month)\n"
-        "  • **Gold (100 stories/year):** $199.99/year (equivalent to ~$16.67/month)\n\n"
-        "All subscriptions include priority support and early access to new features!\n"
-        "Ready to start your storytelling journey? Just ask for 'help' if you have more questions!"
+        "**Story Credits:**\n"
+        "  • 1 Credit: $4.99\n"
+        "  • 5 Credits: $19.99 (Save 20%)\n"
+        "  • 10 Credits: $34.99 (Save 30%)\n\n"
+        "**Subscriptions (Best Value!):**\n"
+        "  • Bronze (5/month): $17.99/mo\n"
+        "  • Silver (20/quarter): $67.99/quarter (~$16.99/mo)\n"
+        "  • Gold (100/year): $199.99/year (~$16.67/mo)\n\n"
+        "All plans include priority support and early feature access!\n"
+        "Questions? Just ask for 'help'."
     ),
     "GENRES_MESSAGE": (
         "📚 **Available Story Genres** 📚\n\n"
-        "I can craft tales in a wide array of genres, including:\n"
-        "  • **Adventure:** Thrilling quests and daring escapades.\n"
-        "  • **Comedy:** Lighthearted and humorous narratives.\n"
-        "  • **Cyberpunk:** Dystopian futures with advanced tech and low-life.\n"
-        "  • **Fantasy:** Magic, mythical creatures, and fantastical worlds.\n"
-        "  • **Historical:** Stories set in the past, blending fact and fiction.\n"
-        "  • **Horror:** Spine-chilling and suspenseful tales.\n"
-        "  • **Mystery:** Puzzles, clues, and secrets to unravel.\n"
-        "  • **Romance:** Stories of love and relationships.\n"
-        "  • **Sci-Fi:** Futuristic concepts, technology, and space exploration.\n"
-        "  • **Thriller:** High suspense, tension, and unexpected twists.\n"
-        "  • **Western:** Tales of the American Old West.\n\n"
-        "**Popular Genre Combinations:**\n"
-        "  • **Sci-Fi Mystery:** Solve crimes in a futuristic world\n"
-        "  • **Fantasy Adventure:** Epic quests in magical realms\n"
-        "  • **Historical Romance:** Love stories set in fascinating time periods\n"
-        "  • **Horror Comedy:** Scary situations with humorous twists\n"
-        "  • **Western Fantasy:** Magic in the old frontier\n\n"
-        "What kind of story would you like me to create for you today?"
+        "I can write stories in many genres, including:\n"
+        "  • Adventure\n"
+        "  • Comedy\n"
+        "  • Cyberpunk\n"
+        "  • Fantasy\n"
+        "  • Historical\n"
+        "  • Horror\n"
+        "  • Mystery\n"
+        "  • Romance\n"
+        "  • Sci-Fi\n"
+        "  • Thriller\n"
+        "  • Western\n\n"
+        "**Popular combos:**\n"
+        "  • Sci-Fi Mystery\n"
+        "  • Fantasy Adventure\n"
+        "  • Historical Romance\n"
+        "  • Horror Comedy\n"
+        "  • Western Fantasy\n\n"
+        "What kind of story would you like to create?"
     ),
     "GENRE_SUGGESTIONS_MESSAGE": (
         "🌟 **Need Genre Inspiration?** 🌟\n\n"
-        "Not sure what to write? Here are some fantastic options to spark your imagination:\n\n"
-        "**For beginners:**\n"
-        "• **Adventure:** Action-packed journeys with brave heroes\n"
-        "• **Mystery:** Solve an intriguing puzzle or crime\n"
-        "• **Fantasy:** Magical worlds with unlimited possibilities\n\n"
-        "**Exciting combinations to try:**\n"
-        "• **Sci-Fi Mystery:** A detective story on a space station\n"
-        "• **Historical Fantasy:** Magic in a real historical setting\n"
-        "• **Romantic Comedy:** Love story with humor and heart\n\n"
-        "**Just tell me:**\n"
-        "\"Create a [genre] story with a [mood] mood\"\n"
-        "For example: \"Create a mystery story with a suspenseful mood\"\n\n"
-        "What sounds most interesting to you? I'm here to help bring your story to life!"
+        "Not sure what to write? Try these:\n"
+        "• Adventure: Action-packed journeys\n"
+        "• Mystery: Solve a puzzle or crime\n"
+        "• Fantasy: Magical worlds\n\n"
+        "Or mix it up:\n"
+        "• Sci-Fi Mystery: Detective in space\n"
+        "• Historical Fantasy: Magic in real history\n"
+        "• Romantic Comedy: Love with humor\n\n"
+        "Just say: \"Create a [genre] story with a [mood] mood\"\n"
+        "What sounds fun to you?"
     ),
     "HOW_IT_WORKS_MESSAGE": (
-        "✨ **How PlotBuddy Works: Your Story Creation Journey** ✨\n\n"
-        "It's super simple to bring your ideas to life:\n"
-        "1.  **Tell me what you want:** Start by saying 'create story' or 'write me a story'.\n"
-        "2.  **Define your story:** I'll then ask you for three key things:\n"
-        "    - **Genre:** (e.g., fantasy, sci-fi, mystery)\n"
-        "    - **Mood:** (e.g., mysterious, whimsical, dark)\n"
-        "    - **Length:** (e.g., micro, short, medium, long)\n"
-        "    *Example: 'Write a short sci-fi story with a tense mood.'*\n"
-        "3.  **Generate!** I'll get to work crafting a unique narrative just for you.\n"
-        "4.  **Review & Refine:** Read your story! You can then save it or generate another.\n\n"
-        "Let's get writing!"
+        "✨ **How PlotBuddy Works** ✨\n\n"
+        "1. I'll ask for genre, mood, and length.\n"
+        "2. I'll generate your story!\n"
+        "3. Read, save, or create another.\n\n"
+        "Ready to get started?"
     ),
-    "HOURS_MESSAGE": "🕒 **PlotBuddy Support Hours:**\nOur dedicated support team is available from **9 AM to 9 PM PDT**, seven days a week. We're here to help you anytime!",
+    "HOURS_MESSAGE": (
+        "🕒 **Support Hours:**\n"
+        "Our team is available 9 AM – 9 PM PDT, 7 days a week."
+    ),
     "CONTACT_MESSAGE": (
-        "📞 **Need to Reach Us?**\n\n"
-        "For support, feedback, or inquiries, you can:\n"
-        "  • **Email Us:** support@plotbuddy.ai\n"
-        "  • **Visit Our Help Center:** help.plotbuddy.ai (coming soon!)\n"
-        "  • Our team is available 9 AM - 9 PM PDT, 7 days a week."
+        "📞 **Contact Us:**\n"
+        "• Email: support@plotbuddy.ai\n"
+        "• Help Center: help.plotbuddy.ai (coming soon!)\n"
+        "We're here 9 AM – 9 PM PDT, every day."
+    ),
+    "PROFILE_OVERVIEW": (
+        "👤 **Your PlotBuddy Profile**\n\n"
+        "View your subscription, story credits, and recent activity here. "
+        "Want to update preferences or see your story history? Just ask!"
+    ),
+    "PROFILE_UPDATE_SUCCESS": (
+        "✅ **Profile Updated!**\n\n"
+        "Your preferences are saved. Need to change anything else?"
+    ),
+    "PROFILE_UPDATE_FAIL": (
+        "⚠️ **Profile Update Failed**\n\n"
+        "Sorry, I couldn't update your profile. Please try again or contact support."
+    ),
+    "PROFILE_CREDITS": (
+        "💎 **Story Credits**\n\n"
+        "You have {credits} story credits left. "
+        "Need more? Ask about pricing or plans!"
     ),
     "DEFAULT_FALLBACK": (
-        "🤔 **Hmm, I'm not quite sure what you're asking.**\n"
-        "Could you please rephrase your question, or try one of these common commands?\n\n"
-        "  • `help` - To see a list of all commands.\n"
-        "  • `how it works` - To learn about story creation.\n"
-        "  • `what genres` - To explore available story types.\n"
-        "  • `pricing` - To find out about costs and subscriptions.\n\n"
-        "I'm here to help you write awesome stories!"
+        "🤔 **I didn't quite get that.**\n\n"
+        "Try one of these:\n"
+        "• Type `help` for options\n"
+        "• Ask me to `create story` or `write a [genre] story`\n"
+        "• Try `what genres` or `suggest a genre for me`\n"
+        "• Ask about `pricing` or `subscription plans`\n"
+        "• Say `how it works` for a quick guide\n"
+        "• Need help? Type `contact support`\n\n"
+        "✨ The more details you give, the better I can help!"
     ),
-    "REDIRECT_TO_STORY_CREATOR_MESSAGE": "Great! I'll take you to the story creator now. You can choose your genre, mood, and length to get started."
+    "REDIRECT_TO_STORY_CREATOR_MESSAGE": (
+        "Great! I'll take you to the story creator now. You can choose your genre, mood, and length to get started."
+    ),
+    "USING_PLOTBUDDY_MESSAGE": (
+        "# Using PlotBuddy - Quick Start\n\n"
+        "1. **Home:** Start here for help\n"
+        "2. **Story Creator:** Begin a new story\n"
+        "3. **Plot Generator:** Get inspiration\n\n"
+        "To create your first story:\n"
+        "1. Click \"Create Story\"\n"
+        "2. Choose length, genre, and mood\n"
+        "3. Save your story\n\n"
+        "Type \"help\" anytime for assistance!"
+    )
 }
 
 # Assume ERROR_MESSAGES is also defined in multi_tool_agent.config.response
