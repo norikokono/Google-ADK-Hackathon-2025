@@ -10,17 +10,18 @@
 }
 
 .profile-title {
-  font-size: 2.5rem;
+  font-size: 2rem;
   font-weight: 900;
-  color: #FF4E00;
-  background: linear-gradient(90deg, #FF4E00, #EC9F05);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  text-shadow: 2px 2px 10px rgba(255, 78, 0, 0.3);
+  color: white;
+  background: linear-gradient(135deg, #cc60dd 0%, #aa69d3 100%);
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  text-shadow: 1px 1px 6px rgba(0, 0, 0, 0.3);
   text-align: center;
   letter-spacing: 2px;
   font-family: 'Bebas Neue', cursive;
   margin: 2rem 0;
+  box-shadow: 0 8px 24px rgba(206, 74, 226, 0.4);
 }
 
 .profile-card {
@@ -112,12 +113,12 @@
 }
 
 .action-button.primary {
-  background: #ce4ae2;
+  background: linear-gradient(135deg, #ce4ae2 0%, #d96be8 35%, #b44cd9 70%, #902bbf 100%);
   color: white;
 }
 
 .action-button.secondary {
-  background: #f0f0f0;
+  background: linear-gradient(135deg, #f0f0f0 0%, #e0e0e0 50%, #d0d0d0 100%);
   color: #333;
 }
 
@@ -128,7 +129,7 @@
 
 /* AI Recommendations Section */
 .ai-recommendations-section {
-  background-color: #fef1f7;
+  background: linear-gradient(to bottom, #fef1f7, #fbcfe8);
   border-radius: 12px;
   padding: 20px;
   margin: 20px 0;
@@ -139,12 +140,12 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  color: #d81b60;
+  color: #b53363;
   margin-top: 0;
 }
 
 .refresh-button {
-  background-color: #d81b60;
+  background-color: #e167a8;
   color: white;
   border: none;
   border-radius: 20px;
@@ -182,7 +183,7 @@
 
 .rec-genre {
   font-weight: bold;
-  color: #d81b60;
+  color: #cf497a;
   margin-bottom: 8px;
   font-size: 1rem;
 }
@@ -196,7 +197,7 @@
 
 .start-writing-btn {
   align-self: center;
-  background: linear-gradient(90deg, #e91e63, #d81b60);
+  background: linear-gradient(90deg, #6ecbde, #c01b8c);
   color: white;
   padding: 8px 16px;
   border-radius: 20px;
@@ -214,7 +215,7 @@
 
 /* AI Insights Section */
 .ai-insights-section {
-  background-color: #f3f9ff;
+  background: linear-gradient(to bottom, #fcf3ff, #e5d0f6);
   border-radius: 12px;
   padding: 20px;
   margin: 20px 0;
@@ -251,7 +252,7 @@
 }
 
 .insights-column h4 {
-  color: #0288d1;
+  color: #0293d1;
   margin-top: 0;
   margin-bottom: 10px;
 }
