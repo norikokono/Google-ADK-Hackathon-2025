@@ -5,6 +5,7 @@ import random
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 from ..models.schemas import ToolRequest, ToolResponse
+from google.adk.agents import LlmAgent
 
 logger = logging.getLogger(__name__)
 

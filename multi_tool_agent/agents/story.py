@@ -10,6 +10,7 @@ logging.getLogger(__name__).setLevel(logging.INFO)
 from typing import List, Dict, Any, ClassVar
 import google.generativeai as genai
 import re
+import json  # Add this import at the top
 
 from ..models.schemas import ToolRequest, ToolResponse
 from google.adk.agents import LlmAgent
@@ -87,78 +88,6 @@ class StoryAgent(LlmAgent):
 
         logger.info("StoryAgent initialized.")
 
-    def process(self, request: ToolRequest) -> ToolResponse:
-        """Process story generation requests"""
-        logger.debug(f"StoryAgent processing request for user {request.user_id}.")
-        
-        try:
-            # Handle simple "story" requests
-            if isinstance(request.input, str) and request.input.lower().strip() in ["story", "stories", "tell me a story", "write a story"]:
-                guide_message = """To create a story, please provide these details:
-                
-- Genre (like fantasy, sci-fi, mystery)
-- Mood (like mysterious, cheerful, dark)
-- Length (micro, short, medium, long)
-
-You can say: "Create a mysterious sci-fi micro story" or use the story creation form."""
-                return ToolResponse(success=True, output=guide_message)
-
-            # For structured input with parameters
-            try:
-                if isinstance(request.input, dict):
-                    # If it's already a dictionary, validate it
-                    genre = request.input.get('genre', '')
-                    mood = request.input.get('mood', '')
-                    length = request.input.get('length', '')
-                    
-                    if not all([genre, mood, length]):
-                        return ToolResponse.error("Please provide genre, mood, and length for your story.")
-                        
-                    # Call custom generation method
-                    story = self._generate_story(genre, mood, length, request.user_id)
-                    
-                    # ADD THIS: Check for errors and use fallback
-                    if story.startswith("Error:") or story.startswith("Story generation failed:"):
-                        logger.warning(f"Using fallback story due to error: {story}")
-                        story = self._get_fallback_story(genre, mood, length)
-                    
-                    # Make sure we return a valid response with the required fields
-                    return ToolResponse(
-                        success=True, 
-                        output=story,
-                        # Match the expected structure
-                        parameters={
-                            "genre": genre,
-                            "mood": mood, 
-                            "length": length
-                        }
-                    )
-                    
-                # Handle string format with | separators
-                elif isinstance(request.input, str) and "|" in request.input:
-                    parts = [part.strip() for part in request.input.split("|", 2)]
-                    if len(parts) >= 3:
-                        genre = parts[0]
-                        mood = parts[1]
-                        length = parts[2]
-                        
-                        # Call custom generation method
-                        story = self._generate_story(genre, mood, length, request.user_id)
-                        return ToolResponse(success=True, output=story)
-                    else:
-                        return ToolResponse.error("Please provide genre, mood, and length separated by '|'")
-                else:
-                    # Not structured properly
-                    return ToolResponse.error("To create a story, please provide genre, mood, and length.")
-                    
-            except Exception as e:
-                logger.error(f"Error processing story parameters: {e}")
-                return ToolResponse.error(f"Error processing story parameters: {str(e)}")
-                
-        except Exception as e:
-            logger.error(f"Error generating story: {e}")
-            return ToolResponse.error("Sorry, I encountered an error creating your story.")
-            
     def _generate_story(self, genre: str, mood: str, length: str, user_id: str) -> str:
         """Generate a story based on the provided parameters"""
         logger.info(f"Generating {length} {mood} {genre} story for {user_id}")
@@ -533,3 +462,98 @@ You can say: "Create a mysterious sci-fi micro story" or use the story creation 
     def get_story_length_options(self) -> Dict[str, Dict[str, Any]]:
         """Return all story length options with their details."""
         return self.STORY_LENGTHS
+
+    def process(self, request: ToolRequest, context: Dict[str, Any]) -> ToolResponse:
+        """Process a tool request and return a tool response."""
+        message = request.input
+        user_id = request.user_id
+        
+        logger.info(f"Processing story request from {user_id}: {message}")
+        
+        # Check if this is coming from the story create endpoint
+        is_direct_creation = context.get("direct_creation", False)
+        
+        # Only check for creation redirect if NOT coming from the story create endpoint
+        if not is_direct_creation and self._is_story_creation_request(message):
+            logger.info("Story creation request detected - redirecting to StoryCreator")
+            # Return a special signal for redirection
+            return ToolResponse(
+                output="Let's create a story! Taking you to the story creator...",
+                success=True,
+                data=json.dumps({"redirect": "StoryCreator"})
+            )
+        
+        # Extract story parameters
+        params = self._extract_story_parameters(message, context)
+        
+        # Generate the story using parameters from context first, then extracted params
+        genre = context.get("genre") or params.get("genre") or "fantasy"
+        mood = context.get("mood") or params.get("mood") or "mysterious" 
+        length = context.get("length") or params.get("length") or "short"
+        
+        logger.info(f"Generating {length} {mood} {genre} story for {user_id}")
+        
+        story = self._generate_story(genre, mood, length, user_id)
+        
+        # Create response data
+        data_dict = {"genre": genre, "mood": mood, "length": length}
+        
+        return ToolResponse(
+            output=story,
+            success=True,
+            data=json.dumps(data_dict)
+        )
+
+    def _is_story_creation_request(self, message: str) -> bool:
+        """Determine if the message is requesting story creation."""
+        # Use regex patterns to identify story creation requests
+        creation_patterns = [
+            r"\b(?:create|write|make|generate|start|build|develop)\b.*?\b(?:story|tale|narrative)\b",
+            r"\b(?:story\s*?creator|story\s*?creation)\b",
+            r"\b(?:new|another)\s+(?:story|tale)\b", 
+            r"(?:^|\s)story(?:$|\s)",      # Just the word "story" by itself
+            r"(?:^|\s)write(?:$|\s)",      # Just the word "write" by itself
+            r"(?:^|\s)create(?:$|\s)",     # Just the word "create" by itself
+            r"\b(?:ready|prepared|want|like) to (?:write|create|make)\b",
+            r"\bi (?:want|would like) (?:a|to write|to create)\b.*?\b(?:story|tale)\b"
+        ]
+        
+        message_lower = message.lower()
+        
+        # Check against each pattern
+        for pattern in creation_patterns:
+            if re.search(pattern, message_lower):
+                return True
+            
+        # Also check for explicit story keywords if they make up most of the message
+        story_keywords = ["story", "write", "create", "tale", "narrative"]
+        word_count = len(message_lower.split())
+        
+        # If the message is short (1-3 words) and contains a story keyword
+        if word_count <= 3:
+            for keyword in story_keywords:
+                if keyword in message_lower:
+                    return True
+        
+        return False
+    
+    def generate_story(self, user_id: str, genre: str, mood: str, length: str, 
+                      characters: list = None, plot_elements: list = None) -> str:
+        """
+        Directly generate a story based on UI parameters.
+        This method is called by the /api/story/create endpoint.
+        """
+        logger.info(f"Generating {length} {mood} {genre} story for {user_id}")
+        
+        characters = characters or []
+        plot_elements = plot_elements or []
+        
+        # Use the existing _generate_story method
+        return self._generate_story(
+            genre=genre,
+            mood=mood,
+            length=length,
+            characters=characters,
+            plot_elements=plot_elements,
+            user_id=user_id
+        )

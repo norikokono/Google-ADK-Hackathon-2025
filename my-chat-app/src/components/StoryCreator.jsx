@@ -265,7 +265,7 @@ const StoryCreator = ({ onCreateStory, onBackToChat }) => {
             <p>
               {profileAgentMessage || (
                 <span>
-                  Welcome to PlotBuddy <img src="assets/images/plotbuddy-logo" alt="PlotBuddy" /> Story Creator! 
+                  Welcome to PlotBuddy Story Creator! 
                   What kind of story would you like to create today? I'm here to help with ideas and suggestions.
                 </span>
               )}

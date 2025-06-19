@@ -52,122 +52,92 @@ class StoryRequest(BaseModel):
 async def create_story(request: Request):
     try:
         data = await request.json()
-        
-        # Input validation
         user_id = data.get('user_id', 'anonymous_user')
+        genre = data.get('genre', '')
+        mood = data.get('mood', '')
+        length = data.get('length', 'short')
         
-        # Handle random story request
-        if data.get('random', False):
-            try:
-                # Add error handling to random parameter selection
-                genre = random.choice(story_agent._valid_genres or ["fantasy"])
-                mood = random.choice(story_agent._valid_moods or ["mysterious"])
-                length = random.choice(story_agent._valid_lengths or ["short"])
-            except (IndexError, TypeError, ValueError) as e:
-                # Fallback if random.choice fails
-                logger.error(f"Error selecting random parameters: {e}")
-                genre = "fantasy"
-                mood = "mysterious"
-                length = "short"
-            
-            logger.debug(f"Random story request: Create a {length} {genre} story with a {mood} mood")
-            
-            # Create tool request with parameters
-            tool_request = ToolRequest(
-                user_id=user_id,
-                input={
-                    'genre': genre,
-                    'mood': mood,
-                    'length': length
-                }
-            )
-        else:
-            # These parameters need to be present in the request
-            genre = data.get("genre")
-            mood = data.get("mood") 
-            length = data.get("length")
-            
-            # Log the received data
-            logger.debug(f"Story request from {user_id}: genre={genre}, mood={mood}, length={length}")
-            
-            # Option 1: Send as a dictionary (preferred)
-            tool_request = ToolRequest(
-                user_id=user_id, 
-                input={
-                    "genre": genre,
-                    "mood": mood,
-                    "length": length
-                }
-            )
-
-            # OR Option 2: Send as a pipe-separated string
-            # input_prompt = f"{genre}|{mood}|{length}"
-            # tool_request = ToolRequest(
-            #    user_id=user_id, 
-            #    input=input_prompt
-            # )
+        logger.debug(f"Story request from {user_id}: genre={genre}, mood={mood}, length={length}")
         
-        # Process the request with the story agent
-        result = story_agent.process(tool_request)
+        # Use only the parameters that _generate_story actually accepts
+        story = story_agent._generate_story(
+            genre=genre,
+            mood=mood,
+            length=length,
+            user_id=user_id
+            # Remove characters and plot_elements parameters
+        )
         
-        # Error checking - ensure we have a valid result
-        if not result or not hasattr(result, 'output'):
-            logger.error("StoryAgent returned invalid response")
-            return {"success": False, "message": "Failed to generate story"}
-            
-        # Add try/except for dictionary access
-        try:
-            # Return the story and parameters
-            response = {
-                "success": True,
-                "story": result.output,
-                "parameters": {
-                    # Ensure parameters always have values
-                    "genre": genre or "fantasy",
-                    "mood": mood or "mysterious",
-                    "length": length or "short"
-                }
-            }
-            return response
-        except Exception as e:
-            logger.error(f"Error processing StoryAgent response: {e}")
-            return {"success": False, "message": "Failed to process story response"}
-    
+        # Return the complete story response
+        return {
+            "success": True,
+            "output": story,
+            "story": story,
+            "title": data.get('title', f"{mood.capitalize()} {genre.capitalize()} Tale"),
+            "isComplete": True
+        }
+        
     except Exception as e:
-        logger.error(f"StoryAgent error: {e}")
-        return {"success": False, "message": "Error generating story"}
+        logger.error(f"StoryAgent error: {e}", exc_info=True)
+        return {
+            "success": False,
+            "output": "Sorry, I couldn't create a story right now. Please try again.",
+            "message": str(e)
+        }
 
 @app.post("/api/chat")
 async def chat(request: Request):
-    data = await request.json()
-    user_input = data.get('input', '')
-    user_id = data.get('user_id', 'anonymous_user')
-    
-    logger.debug(f"Chat request from {user_id}: '{user_input}'")
-    
-    if not user_input:
+    try:
+        data = await request.json()
+        user_input = data.get('input', '') or data.get('message', '')
+        user_id = data.get('user_id', 'anonymous_user')
+        
+        logger.debug(f"Chat request from {user_id}: '{user_input}'")
+        
+        if not user_input or user_input.strip() == "":
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "output": "Hello! I'm PlotBuddy. Please send a message to start our conversation.",
+                    "error": "empty_message"
+                }
+            )
+        
+        # Create tool request
+        tool_request = ToolRequest(user_id=user_id, input=user_input)
+        
+        # Import orchestrator here to avoid circular imports
+        from ..agents.orchestrator import orchestrator
+        
+        # Let the orchestrator handle all intent detection and routing
+        response = orchestrator.process_message(user_id, tool_request)
+        
+        # Debug the response
+        logger.debug(f"FULL RESPONSE: output={response.output}, message={response.message}")
+        
+        # Check for the story redirect signal
+        if response.message == "REDIRECT_TO_STORY_CREATOR":
+            return {
+                "success": True,
+                "output": response.output,
+                "message": response.message,
+                "action": "navigate_to_story_creator"  # Add this field for the frontend
+            }
+        
+        # Return a normal response
         return {
-            "success": False, 
-            "output": "I didn't receive any input. What would you like to talk about?"
+            "success": response.success,
+            "output": response.output,
+            "message": response.message
         }
     
-    # Create a tool request
-    tool_request = ToolRequest(user_id=user_id, input=user_input)
-    
-    # Import manager here to avoid circular imports
-    from ..agents.manager import manager
-    
-    # Process with manager
-    response = manager.process_message(user_id, tool_request)
-    
-    # Debug the response BEFORE returning it
-    logger.debug(f"FULL RESPONSE: output={response.output}, message={response.message}")
-    
-    return {
-        "success": response.success,
-        "output": response.output,
-        "message": response.message  # Make sure this line exists!
-    }
+    except Exception as e:
+        logger.error(f"Chat error: {e}")
+        return {
+            "success": False, 
+            "output": "Sorry, an error occurred. Please try again."
+        }
 
 @app.post("/api/profile")
 async def get_profile(request: Request):  # Use FastAPI Request
@@ -253,6 +223,50 @@ async def profile_advice(request: Request):
     except Exception as e:
         logger.exception(f"Error in profile advice: {e}")
         return {"success": False, "output": "Sorry, I encountered an error while providing advice."}
+
+@app.post("/api/ai/recommendations")
+async def ai_recommendations(request: Request):
+    try:
+        data = await request.json()
+        user_id = data.get('user_id', 'anonymous_user')
+        content_type = data.get('contentType', 'genre')  # What kind of recommendations (genre, mood, etc.)
+        current_selection = data.get('currentSelection', {})  # User's current choices
+        
+        logger.debug(f"AI recommendations request from {user_id}: type={content_type}")
+        
+        # Import recommendation agent or use existing agents
+        # You can use orchestrator or a specific agent for recommendations
+        from ..agents.orchestrator import orchestrator
+        
+        # Create a tool request for recommendations
+        tool_request = ToolRequest(
+            user_id=user_id,
+            input=f"recommend {content_type}",
+            params={
+                "content_type": content_type,
+                "current_selection": current_selection
+            }
+        )
+        
+        # Process with orchestrator to get recommendations
+        # If you have a specialized recommendations agent, use that instead
+        response = orchestrator.get_recommendations(content_type, current_selection)
+        
+        # Return recommendations
+        return {
+            "success": True,
+            "recommendations": [
+                # Default recommendations if none available from agent
+                {"id": 1, "title": "Default Recommendation 1", "genre": "Fantasy", "mood": "Adventurous"},
+                {"id": 2, "title": "Default Recommendation 2", "genre": "Mystery", "mood": "Suspenseful"}
+            ]
+        }
+    except Exception as e:
+        logger.error(f"Recommendations error: {e}")
+        return {
+            "success": False,
+            "output": "Sorry, I couldn't fetch recommendations right now. Please try again."
+        }
 
 def main():
     import uvicorn

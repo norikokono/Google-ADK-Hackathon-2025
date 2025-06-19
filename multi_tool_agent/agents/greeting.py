@@ -4,6 +4,7 @@ logger = logging.getLogger(__name__) # Moved this line to the very top
 import os
 from datetime import datetime
 from typing import ClassVar, Set, Any, Dict, Optional
+import json
 
 # Local module imports
 from ..models.schemas import ToolRequest, ToolResponse
@@ -59,13 +60,17 @@ class GreetingAgent(LlmAgent):
         )
         logger.info("GreetingAgent initialized.")
 
-    def process(self, request: ToolRequest) -> ToolResponse:
-        """Process greeting messages with LLM personalization."""
-        if not isinstance(request.input, str):
-            return ToolResponse(success=False, error="I can only understand text messages.")
+    def process(self, request: ToolRequest, context: Dict[str, Any] = None) -> ToolResponse:
+        """Process the greeting request"""
+        # Initialize context if None
+        if context is None:
+            context = {}
+            
+        user_id = request.user_id
+        message = request.input  # Changed from request.message
         
         # Check if this is a greeting or non-greeting query
-        message_lower = request.input.lower().strip()
+        message_lower = message.lower().strip()
         
         # Define greeting-specific keywords
         greeting_keywords = ["hi", "hello", "hey", "howdy", "greetings", "good morning", 
@@ -79,11 +84,11 @@ class GreetingAgent(LlmAgent):
         # If the message contains FAQ keywords or doesn't contain any greeting keywords,
         # this is NOT a greeting and should be handled by another agent
         if any(keyword in message_lower for keyword in faq_keywords):
-            logger.info(f"FAQ content detected in: '{request.input}' - declining to process")
+            logger.info(f"FAQ content detected in: '{message}' - declining to process")
             return ToolResponse(success=False, message="Not a greeting message")
         
         if not any(word in message_lower for word in greeting_keywords):
-            logger.info(f"No greeting keywords found in: '{request.input}' - declining to process")
+            logger.info(f"No greeting keywords found in: '{message}' - declining to process")
             return ToolResponse(success=False, message="Not a greeting message")
             
         # Otherwise, proceed with normal greeting processing
@@ -109,7 +114,7 @@ class GreetingAgent(LlmAgent):
 
                 # Create personalized greeting prompt
                 # Improved prompt for more reliable LLM responses
-                prompt = f"""The user greeted you with: "{request.input}"
+                prompt = f"""The user greeted you with: "{message}"
 
 You are PlotBuddy, a friendly and enthusiastic AI creative writing assistant.
 
@@ -133,7 +138,7 @@ Now, craft your personalized greeting:
                     temperature=0.7, # A bit of creativity, but still focused
                     max_output_tokens=70 # Ensure conciseness
                 )
-                logger.info(f"Generating LLM greeting for input: '{request.input}' with time of day: {time_of_day}")
+                logger.info(f"Generating LLM greeting for input: '{message}' with time of day: {time_of_day}")
                 genai_response = model.generate_content(prompt, generation_config=generation_config)
 
                 if hasattr(genai_response, 'text') and genai_response.text.strip():
@@ -151,7 +156,7 @@ Now, craft your personalized greeting:
             logger.exception("Details of LLM greeting error:")
 
         # Fall back to template response if LLM fails or is not available
-        logger.info(f"Using template greeting as fallback for '{request.input}'.")
+        logger.info(f"Using template greeting as fallback for '{message}'.")
         return ToolResponse(success=True, output=fallback_response)
 
 

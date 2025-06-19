@@ -8,6 +8,9 @@ from typing import Optional, Dict, Any, Union
 import google.generativeai as genai
 import re
 
+# Add the import for LlmAgent from Google ADK
+from google.adk.agents import LlmAgent
+
 logger = logging.getLogger(__name__)
 
 # Local module imports
@@ -34,22 +37,31 @@ except ImportError:
 
 from multi_tool_agent.config.response import GREETING_RESPONSES, FAQ_RESPONSES, STORY_TEMPLATES, ERROR_MESSAGES
 
-class ManagerAgent:
+class OrchestratorAgent:
     """
     Manages the initialization and routing of messages to different PlotBuddy agents.
+    Uses composition instead of inheritance for LlmAgent integration.
     """
-    def __init__(self, model_name="gemini-2.0-pro"):
+    def __init__(self, model_name="gemini-2.0-flash"):
         """
         Initializes all the individual PlotBuddy agents.
         """
+        # Create an LlmAgent instance instead of inheriting from it
+        self.llm_agent = LlmAgent(
+            model=model_name,
+            name="orchestrator_agent",
+            description="Orchestrates the routing of messages to different specialized agents",
+            instruction="You are an orchestrator that routes messages to specialized agents based on the content."
+        )
+        
         self.model_name = model_name
-        logger.info(f"ManagerAgent initialized with model: {model_name}")
+        logger.info(f"OrchestratorAgent initialized with model: {model_name}")
         
         # Initialize specialized agents - keep these on 1.5
         self.greeting_agent = GreetingAgent("gemini-1.5-flash")
         self.faq_agent = FAQAgent("gemini-1.5-flash")
-        self.profile_agent = ProfileAgent("gemini-2.0-flash")
-        self.story_agent = StoryAgent("gemini-1.5-flash")
+        self.profile_agent = ProfileAgent("gemini-1.5-flash")
+        self.story_agent = StoryAgent("gemini-2.0-flash")
         
         # Set default agent for initial interactions
         self.default_agent = self.greeting_agent
@@ -106,25 +118,48 @@ class ManagerAgent:
         return self.faq_agent
 
     def process_message(self, user_id: str, request: ToolRequest) -> ToolResponse:
+        """
+        Process an incoming message and route it to the appropriate agent.
+        """
         logger.info(f"New message from {user_id}: '{request.input}'")
         
-        agent_to_use = self._route_message(request)
-        logger.info(f"Selected: {agent_to_use.__class__.__name__}")
+        # Check for story creation intent
+        message_lower = request.input.lower()
+        story_keywords = ["create story", "write story", "make story", "story creation", "new story"]
         
+        if any(keyword in message_lower for keyword in story_keywords) or message_lower.strip() == "story":
+            logger.info(f"Story creation intent detected in orchestrator: '{request.input}'")
+            
+            # Use existing fields only - set a special message value to signal redirection
+            return ToolResponse(
+                success=True,
+                output="I'd love to help you create a story! Let me take you to our story creator tool.",
+                message="REDIRECT_TO_STORY_CREATOR"  # Use this special message as a signal
+            )
+        
+        # Use the existing _route_message method
         try:
-            response = agent_to_use.process(request)
-            logger.info(f"Response: {response.output or response.message}")
-            return response
+            agent_to_use = self._route_message(request)
+            logger.info(f"Selected: {agent_to_use.__class__.__name__}")
+            return agent_to_use.process(request)
         except Exception as e:
-            logger.error(f"Error in {agent_to_use.__class__.__name__}: {e}")
-            return ToolResponse.error("I apologize, I'm having trouble understanding. Could you rephrase that?")
+            logger.error(f"Error processing message: {e}")
+            return ToolResponse(
+                success=False,
+                output="I'm sorry, I encountered an error. Please try again.",
+                message=f"Error: {str(e)}"
+            )
 
-    def process(self, request: ToolRequest) -> ToolResponse:
+    def process(self, request: ToolRequest, context: Dict[str, Any] = None) -> ToolResponse:
         """Process the request by selecting the appropriate agent"""
         logger.info(f"Agent Manager received: '{request.input}'")
         
+        # Ensure we have a context
+        if context is None:
+            context = {}
+        
         # First try the greeting agent
-        greeting_response = self.greeting_agent.process(request)
+        greeting_response = self.greeting_agent.process(request, context)
         logger.info(f"Greeting agent response: success={greeting_response.success}")
         
         # If greeting agent handled it successfully, return that response
@@ -133,7 +168,7 @@ class ManagerAgent:
         
         # If not greeting, try the FAQ agent next
         logger.info(f"Trying FAQ agent for: '{request.input}'")
-        faq_response = self.faq_agent.process(request)
+        faq_response = self.faq_agent.process(request, context)
         logger.info(f"FAQ agent response: success={faq_response.success}")
         
         # If FAQ handled it, return that
@@ -142,12 +177,10 @@ class ManagerAgent:
         
         # If still not handled, try story agent or fall back to LLM
         # Process request with appropriate agent
-        response = self.story_agent.process(request)
+        response = self.story_agent.process(request, context)
         
         # Store this response in the context for next request
-        if not request.context:
-            request.context = {}
-        request.context["last_agent_response"] = response.output
+        context["last_agent_response"] = response.output
         
         return response
 
@@ -210,9 +243,17 @@ class ManagerAgent:
                 return "story"
                 
             # Rest of the method remains the same...
+            return "faq"  # Default fallback
         except Exception as e:
             logger.error(f"Error in _determine_best_agent: {e}")
             return "faq"  # Fallback to FAQ agent on error
 
+    # Delegate to the LlmAgent's process method if needed
+    def use_llm_agent(self, request: ToolRequest, context: Dict[str, Any] = None) -> ToolResponse:
+        """Use the LLM agent directly"""
+        if context is None:
+            context = {}
+        return self.llm_agent.process(request, context)
+
 # Singleton instance
-manager = ManagerAgent()
+orchestrator = OrchestratorAgent()

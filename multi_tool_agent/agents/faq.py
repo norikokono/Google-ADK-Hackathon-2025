@@ -2,6 +2,7 @@ import logging
 from typing import Dict, Callable, Any, List, Optional
 from pydantic import PrivateAttr
 import re
+import json
 
 from ..models.schemas import ToolRequest, ToolResponse
 from google.adk.agents import LlmAgent
@@ -106,8 +107,15 @@ class FAQAgent(LlmAgent):
 
         logger.info("FAQAgent initialized.")
 
-    def process(self, request: ToolRequest) -> ToolResponse:
-        """Process an FAQ request with intelligent intent detection."""
+    def process(self, request: ToolRequest, context: Dict[str, Any] = None) -> ToolResponse:
+        """Process the FAQ request"""
+        # Initialize context if None
+        if context is None:
+            context = {}
+            
+        user_id = request.user_id
+        message = request.input  # Changed from request.message
+        
         logger.debug(f"FAQAgent processing request for user {request.user_id} with input: {request.input}")
 
         # Add more detailed logging
@@ -238,8 +246,10 @@ class FAQAgent(LlmAgent):
     - If the query mentions "support", "contact", "login issues", "account" or any request to speak with someone, ALWAYS respond with contact information.
     - For support and contact requests, direct them to email support@plotbuddy.ai or visit help.plotbuddy.ai
     - If the query is about a feature PlotBuddy does not have, gently explain that feature is not available and suggest alternatives.
-
-    Now, respond to the user's query:
+    - If the user is looking for help with a specific issue, encourage them to provide more details.
+    - If the user asks about how to use PlotBuddy, provide a brief overview of the app's main features and how to get started.
+   
+       Now, respond to the user's query:
     """
 
     # Update the FAQ agent's pattern matching in faq.py
@@ -298,20 +308,20 @@ class FAQAgent(LlmAgent):
 # In a real application, ensure these are loaded from your config.
 FAQ_RESPONSES = {
     "HELP_MESSAGE": (
-        "🚀 **Welcome to PlotBuddy Help!**\n\n"
-        "Here's what I can help you with:\n"
-        "— **General Commands:**\n"
-        "  • Type `help` to see this menu again.\n"
-        "  • Ask `how it works` for a quick overview.\n"
-        "  • Say `contact support` for assistance or feedback.\n\n"
-        "— **Story Creation:**\n"
-        "  • Ask `what genres` to explore story types.\n"
-        "  • To start, just say `create story` or `write a story` (then pick genre, mood, and length!).\n\n"
-        "— **Account & Pricing:**\n"
-        "  • Ask about `pricing` or `subscription plans`.\n"
-        "  • Query `business hours` for support times.\n\n"
-        "**💡 Tip:** Be specific! For example: 'Create a short sci-fi story with a mysterious mood.'\n"
-        "I'm here to help you bring your ideas to life!"
+    "🌟 **Welcome to PlotBuddy Help!** 🌟\n\n"
+    "Here's what I can help you with:\n\n"
+    "🧭 — **General Navigation:**\n"
+    "  • Tap `help` to return to this menu 📋\n"
+    "  • Tap `how it works` for a quick walkthrough 🛠️\n"
+    "  • Need a hand? Tap `contact support` 📞\n\n"
+    "✍️ — **Story Creation:**\n"
+    "  • Browse `what genres` to explore creative options 🎭\n"
+    "  • Tap `create story` to begin—just choose a *genre*, *mood*, and *length* 📖\n\n"
+    "💼 — **Account & Pricing:**\n"
+    "  • Curious about costs? Tap `pricing` or `subscription plans` 💳\n"
+    "  • Want to know when we're available? Tap `business hours` 🕒\n\n"
+    "💡 **Tip:** Use the dropdown menus to pick your perfect story setup—*no typing needed!* Just tap, choose, and let the magic begin. ✨\n\n"
+    "Let’s bring your imagination to life—one story at a time! 🚀📚"
     ),
     "PRICING_MESSAGE": (
         "💰 **PlotBuddy Pricing & Plans** 💰\n\n"
@@ -362,12 +372,12 @@ FAQ_RESPONSES = {
         "What sounds fun to you?"
     ),
     "HOW_IT_WORKS_MESSAGE": (
-        "✨ **How PlotBuddy Works** ✨\n\n"
-        "1. I'll ask for genre, mood, and length.\n"
-        "2. I'll generate your story!\n"
-        "3. Read, save, or create another.\n\n"
-        "Ready to get started?"
-    ),
+    "📚 **Welcome to PlotBuddy! Here's How It Works** 📚\n\n"
+    "1️⃣ Tell me your *genre*, *mood*, and *story length* 📝\n"
+    "2️⃣ Sit back while I spin your tale 🧠💫\n"
+    "3️⃣ Read it, save it, or start a brand-new adventure 🚀📖\n\n"
+    "🎬 *Ready to unleash your imagination?* Let's get started! 🎉"
+   ),
     "HOURS_MESSAGE": (
         "🕒 **Support Hours:**\n"
         "Our team is available 9 AM – 9 PM PDT, 7 days a week."
@@ -397,30 +407,33 @@ FAQ_RESPONSES = {
         "Need more? Ask about pricing or plans!"
     ),
     "DEFAULT_FALLBACK": (
-        "🤔 **I didn't quite get that.**\n\n"
-        "Try one of these:\n"
-        "• Type `help` for options\n"
-        "• Ask me to `create story` or `write a [genre] story`\n"
-        "• Try `what genres` or `suggest a genre for me`\n"
-        "• Ask about `pricing` or `subscription plans`\n"
-        "• Say `how it works` for a quick guide\n"
-        "• Need help? Type `contact support`\n\n"
-        "✨ The more details you give, the better I can help!"
+    "🤔 **Oops! I didn't catch that.**\n\n"
+    "No worries—here are some things you can try:\n"
+    "• Type `help` to see what I can do 🧰\n"
+    "• Say `create story` or `write a [genre] story` ✍️\n"
+    "• Try `what genres` or `suggest a genre for me` 🎭\n"
+    "• Ask about `pricing` or `subscription plans` 💳\n"
+    "• Need a quick overview? Say `how it works` 🛠️\n"
+    "• Looking for support? Just say `contact support` 📞\n\n"
+    "✨ *Pro Tip:* The more specific you are, the better I can craft your perfect story!"
     ),
     "REDIRECT_TO_STORY_CREATOR_MESSAGE": (
-        "Great! I'll take you to the story creator now. You can choose your genre, mood, and length to get started."
-    ),
+    "🎉 Awesome! Let’s head to the Story Creator 🪄\n"
+    "You’ll get to pick your *genre*, *mood*, and *length*—then I’ll work my magic! ✍️📖"
+   ),
     "USING_PLOTBUDDY_MESSAGE": (
-        "# Using PlotBuddy - Quick Start\n\n"
-        "1. **Home:** Start here for help\n"
-        "2. **Story Creator:** Begin a new story\n"
-        "3. **Plot Generator:** Get inspiration\n\n"
-        "To create your first story:\n"
-        "1. Click \"Create Story\"\n"
-        "2. Choose length, genre, and mood\n"
-        "3. Save your story\n\n"
-        "Type \"help\" anytime for assistance!"
-    )
+    "## 🚀✨ Getting Started with PlotBuddy ✨🚀\n\n"
+    "Welcome, storyteller! Here's your quick-launch guide to creativity:\n\n"
+    "🏠 **Home:** Your cozy hub for help and options 🛋️💡\n"
+    "📝 **Story Creator:** Craft your tale step-by-step ✍️📖\n"
+    "🎲 **Plot Generator:** Feeling stuck? Roll the dice for fresh ideas 🎰💡\n\n"
+    "🛠️ **To Create Your First Story:**\n"
+    "1️⃣ Tap `Create Story` ➕\n"
+    "2️⃣ Choose *Length*, *Genre*, and *Mood* from the dropdowns 🎭📏🎨\n"
+    "3️⃣ Hit `Save` to keep your masterpiece forever 💾🌟\n\n"
+    "💬 Need assistance anytime? Type `Help` and I’m here for you! 🤗🔧\n\n"
+    "✨ Let your imagination run wild—PlotBuddy’s got your back! 🦄📚💫"
+   ),
 }
 
 # Assume ERROR_MESSAGES is also defined in multi_tool_agent.config.response

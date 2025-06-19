@@ -1,21 +1,13 @@
 """
 PlotBuddy Multi-Agent System
+A multi-agent system for creative writing assistance.
 """
 
-from .agent import process_message
-from .agents import (
-    GreetingAgent,
-    FAQAgent,
-    ProfileAgent,
-    StoryAgent,
-    ManagerAgent  # Changed from OrchestratorAgent
-)
+# Version information
+__version__ = "1.0.0"
 
-__all__ = [
-    'process_message',
-    'GreetingAgent',
-    'FAQAgent',
-    'ProfileAgent',
-    'StoryAgent',
-    'ManagerAgent'
-]
+# Import the main entry point
+from .agent import process_message
+
+# Make process_message available at the package level
+__all__ = ["process_message"]

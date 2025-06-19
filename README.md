@@ -17,7 +17,7 @@ PlotBuddy is an AI-powered multi-agent system designed to assist writers in deve
 
 ### 🤖 Multi-Agent Architecture 🤖
 
-* **🧠 Manager Agent (Gemini 2.0):** Coordinates between specialized agents, routes user requests, and ensures seamless transitions
+* **🧠 Orchestrator Agent (Gemini 2.0):** Coordinates between specialized agents, routes user requests, and ensures seamless transitions
 * **👋 Greeting Agent:** Welcomes users and provides initial guidance
 * **📚 Story Agent:** Specializes in narrative creation with varying lengths and styles
 * **❓ FAQ Agent:** Answers questions about using the application
@@ -49,7 +49,7 @@ Four standardized story lengths with reading time estimates:
 
 * **🤖 Google Agent Development Kit (ADK):** Foundation for building the multi-agent system
 * **🧠 Google Gemini AI Models:**
-    * 🚀 Gemini 2.0 Pro: Powers the Manager Agent for intelligent request routing
+    * 🚀 Gemini 2.0 Flash: Powers the Manager Agent and Story Agent for intelligent request routing
     * ⚡ Gemini 1.5 Flash: Powers specialized agents for efficient responses
 * **🐍 Python:** Backend service with FastAPI
 * **⚛️ React:** Frontend user interface
@@ -68,11 +68,11 @@ Four standardized story lengths with reading time estimates:
 
 [Include Architecture Diagram showing how components interact]
 
-The architecture follows a hub-and-spoke model where the **Manager Agent** serves as the central coordinator that routes user requests to specialized agents:
+The architecture follows a hub-and-spoke model where the **Orchestrator Agent** serves as the central coordinator that routes user requests to specialized agents:
 
 1.  **👤 User** requests come through the React frontend
-2.  **🌐 Backend API** processes requests and forwards to the **Manager Agent**
-3.  **🧠 Manager Agent** analyzes intent and routes to appropriate specialized agent
+2.  **🌐 Backend API** processes requests and forwards to the **Orchestrator Agent**
+3.  **🧠 Orchestrator Agent** analyzes intent and routes to appropriate specialized agent
 4.  **🤖 Specialized agent** generates response
 5.  **↩️ Response** returns through the API to the frontend
 6.  **😃 User** receives personalized assistance
@@ -93,6 +93,7 @@ The architecture follows a hub-and-spoke model where the **Manager Agent** serve
 * **🎯 Intent Classification Challenges:** Accurately determining user intent required multiple iterations to prevent misrouting requests
 * **✨ Prompt Engineering Importance:** Carefully crafted prompts were critical for generating appropriate responses, especially for story creation
 * **🧠 Context Management:** Maintaining conversation context across agent transitions proved crucial for a seamless user experience
+* **⚖️ API Resource Management:** Implementing mock modes and fallbacks enhanced development efficiency and reliability
 
 ### 👥 User Experience Discoveries 👥
 
@@ -105,15 +106,48 @@ The architecture follows a hub-and-spoke model where the **Manager Agent** serve
 * **🔄 Agent Coordination:** Managing the flow of information between agents required careful design
 * **🛠️ Error Handling:** Developing robust error recovery without disrupting the user experience
 * **⚡ Performance Optimization:** Balancing response quality with response time, particularly for longer story generation
+* **🔌 API Reliability:** Implementing fallback systems for uninterrupted development and testing
 
 ---
 
 ## 🚀 Installation & Setup 🚀
 
 1.  **Clone the repository**
+    ```bash
+    git clone https://github.com/yourusername/plotbuddy.git
+    cd plotbuddy
+    ```
+
 2.  **Install dependencies**
+    ```bash
+    # Install backend dependencies
+    pip install -r requirements.txt
+    
+    # Install frontend dependencies
+    cd my-chat-app
+    npm install
+    cd ..
+    ```
+
 3.  **Set up environment variables**
+    ```bash
+    # Create .env file in project root
+    cp .env.example .env
+    
+    # Edit .env with your Google API key
+    # Optional: Set PLOTBUDDY_MOCK_API=true to enable offline development mode
+    ```
+
 4.  **Run the application**
+    ```bash
+    # Start backend
+    python -m multi_tool_agent.api.server
+    
+    # In another terminal, start frontend
+    cd my-chat-app
+    npm start
+    ```
+
 5.  **Access PlotBuddy**
     * Open your browser and go to `http://localhost:3000`
     * Start creating stories with the help of PlotBuddy's AI agents!
@@ -124,7 +158,7 @@ The architecture follows a hub-and-spoke model where the **Manager Agent** serve
 
 ### 🤖 Interacting with Agents 🤖
 
-* **Manager Agent:** The central point for all interactions. Asks clarifying questions and routes to specialized agents.
+* **Orchestrator Agent:** The central point for all interactions. Asks clarifying questions and routes to specialized agents.
 * **Greeting Agent:** Initiates conversation, gathers initial user preferences.
 * **Story Agent:** Engages in detailed story development, from brainstorming to editing.
 * **FAQ Agent:** Provides assistance on using the application, answering common questions.
@@ -140,6 +174,7 @@ If you encounter issues, try the following:
 * Check the terminal for error messages
 * Ensure all services are running (backend and frontend)
 * Review the configuration in the `.env` file
+* If you encounter API connection issues, set `PLOTBUDDY_MOCK_API=true` to enable offline mode
 * Consult the documentation for common troubleshooting steps
 
 ---
@@ -151,6 +186,7 @@ If you encounter issues, try the following:
 * **📚 Resource Library:** Curate a collection of writing resources, templates, and guides
 * **🤝 Collaboration Features:** Enable multiple users to collaborate on stories in real-time
 * **📱 Mobile Application:** Extend PlotBuddy's functionality to mobile devices for on-the-go writing assistance
+* **💰 Advanced API Integration:** Implement enhanced AI model integrations for improved story generation capabilities
 
 ---
 

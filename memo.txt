@@ -31,3 +31,94 @@ python -m multi_tool_agent.api.server
 python test_story.py
 
 lsof -ti:8000 | xargs kill
+
+multi_tool_agent/
+This is your backend (Python, ADK, agents, orchestrator, etc.).
+
+my-chat-app/
+This is your frontend (React app, where you put ChatApp.jsx).
+
+How to connect them:
+
+Run your backend (multi_tool_agent) so it exposes an API endpoint (e.g., /api/chat).
+Run your frontend (my-chat-app) with npm start or yarn start.
+In your React code, make sure the fetch URL matches your backend endpoint.
+If running locally on different ports, use the full URL, e.g.:
+
+
+your_project_root/
+├── multi_tool_agent/
+│   ├── __init__.py          <-- IMPORTANT: This file must exist!
+│   ├── agents/
+│   │   ├── __init__.py      <-- IMPORTANT: This file must exist!
+│   │   └── story.py         <-- Your StoryAgent code is here
+│   └── models/
+│       ├── __init__.py      <-- IMPORTANT: This file must exist!
+│       └── schemas.py       <-- Your ToolRequest, ToolResponse are here
+├── .env                     <-- Your environment variables file
+├── some_main_app.py         <-- (Optional) Your main application entry point
+└── requirements.txt
+
+
+python -m multi_tool_agent.api.server
+
+python test_story.py
+
+lsof -ti:8000 | xargs kill
+
+
+multi_tool_agent/
+This is your backend (Python, ADK, agents, orchestrator, etc.).
+
+my-chat-app/
+This is your frontend (React app, where you put ChatApp.jsx).
+
+How to connect them:
+
+Run your backend (multi_tool_agent) so it exposes an API endpoint (e.g., /api/chat).
+Run your frontend (my-chat-app) with npm start or yarn start.
+In your React code, make sure the fetch URL matches your backend endpoint.
+If running locally on different ports, use the full URL, e.g.:
+
+
+your_project_root/
+├── multi_tool_agent/
+│   ├── __init__.py          <-- IMPORTANT: This file must exist!
+│   ├── agents/
+│   │   ├── __init__.py      <-- IMPORTANT: This file must exist!
+│   │   └── story.py         <-- Your StoryAgent code is here
+│   └── models/
+│       ├── __init__.py      <-- IMPORTANT: This file must exist!
+│       └── schemas.py       <-- Your ToolRequest, ToolResponse are here
+├── .env                     <-- Your environment variables file
+├── some_main_app.py         <-- (Optional) Your main application entry point
+└── requirements.txt
+
+
+python -m multi_tool_agent.api.server
+
+python test_story.py
+lsof -ti:8000 | xargs kill
+
+
+
+
+Google-ADK-Hackathon/
+├── .env                    # Environment variables (API keys)
+├── requirements.txt        # Dependencies
+├── multi_tool_agent/
+│   ├── __init__.py         # Package initialization
+│   ├── agent.py            # Main entry point
+│   ├── adk_compatibility.py  # ADK compatibility layer
+│   ├── agents/             # Specialized agents
+│   │   ├── __init__.py     # Agent registry
+│   │   ├── greeting.py     # Handles greetings
+│   │   ├── faq.py          # Answers questions about the app
+│   │   ├── story.py        # Story generation & editing
+│   │   ├── profile.py      # User profile & coaching
+│   │   └── manager.py      # Orchestrator/router
+│   ├── api/                # API layer
+│   │   ├── __init__.py
+│   │   └── server.py       # FastAPI server
+│   └── models/             # Data models
+│       └── schemas.py      # Pydantic schemas

@@ -7,12 +7,12 @@ from .greeting import GreetingAgent
 from .faq import FAQAgent
 from .profile import ProfileAgent
 from .story import StoryAgent
-from .manager import ManagerAgent
+from .orchestrator import OrchestratorAgent
 
 __all__ = [
     "GreetingAgent",
     "FAQAgent",
     "ProfileAgent",
     "StoryAgent",
-    "ManagerAgent",
+    "OrchestratorAgent",
 ]
