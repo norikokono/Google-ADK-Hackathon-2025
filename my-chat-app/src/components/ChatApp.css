@@ -289,10 +289,10 @@ body {
 .floating-logo {
   position: fixed;
   z-index: -1; /* Place behind other content */
-  opacity: 0.5; /* Subtle appearance */
+  opacity: 0.7; /* Subtle appearance */
   height: auto;
   top: 15%;
-  right: 8%;
+  right: 9%;
   animation: float 20s ease-in-out infinite;
   pointer-events: none; /* Prevents logo from blocking interactions */
 }
