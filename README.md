@@ -2,8 +2,8 @@
 
 ## 🏆 Google Cloud ADK Hackathon Submission 2025 🏆
 
-[PlotBuddy Logo](my-chat-app/public/assets/images/plotbuddy-logo.svg)
-[PlotBuddy Logo](my-chat-app/public/assets/images/plotbuddy-text-logo.svg)
+![PlotBuddy Logo](./my-chat-app/public/assets/images/plotbuddy-logo.svg)
+![PlotBuddy Logo](./my-chat-app/public/assets/images/plotbuddy-text-logo.svg)
 
 ---
 
