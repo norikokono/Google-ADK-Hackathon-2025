@@ -122,3 +122,6 @@ Google-ADK-Hackathon/
 │   │   └── server.py       # FastAPI server
 │   └── models/             # Data models
 │       └── schemas.py      # Pydantic schemas
+
+
+Hosting URL: https://adk-hackathon-2025-b4bfc.web.app

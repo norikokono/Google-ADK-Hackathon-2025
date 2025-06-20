@@ -3,6 +3,8 @@ import PropTypes from 'prop-types';
 import StoryGuide from './StoryGuide';
 import './RandomStory.css';
 
+const API_URL = 'http://localhost:8000'; // URL where your FastAPI server is running locally
+
 const RandomStory = () => {
   const [generatedStoryText, setGeneratedStoryText] = useState('');
   const [storyConfig, setStoryConfig] = useState({
@@ -85,7 +87,7 @@ const RandomStory = () => {
         setTimeout(() => reject(new Error("Request timeout after 15 seconds")), 15000)
       );
       
-      const fetchPromise = fetch('/api/story/create', {
+      const fetchPromise = fetch(`${API_URL}/api/story/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

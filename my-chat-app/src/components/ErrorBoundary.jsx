@@ -2,6 +2,8 @@ import React from "react";
 import PropTypes from "prop-types";
 import "./ErrorBoundary.css";
 
+const API_URL = 'http://localhost:8000'; // URL where your FastAPI server is running locally
+
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);

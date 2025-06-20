@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import './StoryGuide.css';
 
+const API_URL = 'http://localhost:8000'; // URL where your FastAPI server is running locally
+
 const StoryGuide = () => {
   const [generatedStory, setGeneratedStory] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -145,7 +147,7 @@ const StoryGuide = () => {
     
     try {
       // Call your API to generate the actual story
-      const response = await fetch('/api/generate-story', {
+      const response = await fetch(`${API_URL}/api/generate-story`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

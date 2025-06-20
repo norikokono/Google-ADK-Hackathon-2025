@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import './ChatWindow.css';
 
+const API_URL = 'http://localhost:8000'; // URL where your FastAPI server is running locally
+
 const ChatWindow = ({ onSendMessage, isLoading }) => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
@@ -67,7 +69,7 @@ const ChatWindow = ({ onSendMessage, isLoading }) => {
   const handleRandomStory = async () => {
     try {
       console.log("Calling API at /api/story/create");
-      const response = await fetch('/api/story/create', {
+      const response = await fetch(`${API_URL}/api/story/create`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import './ProfilePage.css';
 
+const API_URL = 'http://localhost:8000'; // URL where your FastAPI server is running locally
+
 const ProfilePage = () => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -30,7 +32,7 @@ const ProfilePage = () => {
         setLoading(true);
         
         // Try to fetch from API
-        const response = await fetch('/api/profile', {
+        const response = await fetch(`${API_URL}/api/profile`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -80,7 +82,7 @@ const ProfilePage = () => {
       setLoadingAi(true);
       
       // Call the AI agent endpoint
-      const response = await fetch('/api/ai/recommendations', {
+      const response = await fetch(`${API_URL}/api/ai/recommendations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

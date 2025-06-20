@@ -3,6 +3,8 @@ import ReactMarkdown from 'react-markdown';
 import StoryCreator from '../components/StoryCreator';
 import './ChatApp.css';
 
+const API_URL = 'http://localhost:8000'; // URL where your FastAPI server is running locally
+
 const ChatApp = () => {
   const [currentView, setCurrentView] = useState('chat');
   const [isFirstLoad, setIsFirstLoad] = useState(true);
@@ -42,7 +44,7 @@ const ChatApp = () => {
       const fetchInitialGreeting = async () => {
         try {
           console.log("Fetching initial greeting...");
-          const response = await fetch('/api/chat', {
+          const response = await fetch(`${API_URL}/api/chat`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
@@ -88,7 +90,7 @@ const ChatApp = () => {
       }]);
       
       // Send request to backend
-      const response = await fetch('/api/chat', {
+      const response = await fetch(`${API_URL}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
