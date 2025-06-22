@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import './ChatWindow.css';
+import { fetchAPI } from '../utils/api';
 
-const API_URL = 'http://localhost:8000'; // URL where your FastAPI server is running locally
 
 const ChatWindow = ({ onSendMessage, isLoading }) => {
   const [message, setMessage] = useState('');
@@ -69,23 +69,15 @@ const ChatWindow = ({ onSendMessage, isLoading }) => {
   const handleRandomStory = async () => {
     try {
       console.log("Calling API at /api/story/create");
-      const response = await fetch(`${API_URL}/api/story/create`, {
+      const data = await fetchAPI('/api/story/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ /* your request payload */ }),
       });
-      
-      if (!response.ok) {
-        console.error(`API error: ${response.status} ${response.statusText}`);
-        // Read the error response as text to see what the server says
-        const errorText = await response.text();
-        console.error(`Server response: ${errorText}`);
-        throw new Error(`API returned ${response.status}: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
+
+      // handle success, e.g., update messages with the new story
       // handle success, e.g., update messages with the new story
     } catch (err) {
       console.error("Full error details:", err);

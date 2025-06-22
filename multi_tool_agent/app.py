@@ -24,7 +24,7 @@ app = agent_app.AgentApp(
 )
 
 # Add any middleware or additional configuration here
-
+print("GOOGLE_API_KEY:", os.environ.get("GOOGLE_API_KEY"))
 if __name__ == "__main__":
     # Get port from environment or default to 8080
     port = int(os.environ.get("PORT", 8080))

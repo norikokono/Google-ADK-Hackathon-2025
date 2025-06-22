@@ -8,7 +8,6 @@ from ..models.schemas import ToolRequest, ToolResponse
 from google.adk.agents import LlmAgent
 from . import client
 from multi_tool_agent.config.response import FAQ_RESPONSES, STORY_TEMPLATES, ERROR_MESSAGES
-import google.generativeai as genai
 
 logger = logging.getLogger(__name__)
 
@@ -108,17 +107,12 @@ class FAQAgent(LlmAgent):
         logger.info("FAQAgent initialized.")
 
     def process(self, request: ToolRequest, context: Dict[str, Any] = None) -> ToolResponse:
-        """Process the FAQ request"""
-        # Initialize context if None
         if context is None:
             context = {}
-            
-        user_id = request.user_id
-        message = request.input  # Changed from request.message
-        
-        logger.debug(f"FAQAgent processing request for user {request.user_id} with input: {request.input}")
 
-        # Add more detailed logging
+        user_id = request.user_id
+        message = request.input
+
         logger.info(f"⏺️ FAQ AGENT RECEIVED: '{request.input}'")
 
         if not isinstance(request.input, str):
@@ -126,98 +120,66 @@ class FAQAgent(LlmAgent):
             return ToolResponse.error(ERROR_MESSAGES["INVALID_INPUT_TYPE"])
 
         message_lower = request.input.lower().strip()
-        
-        # IMPORTANT: Check for genre keywords FIRST, before other patterns
-        # Move this block above your other pattern checks
+
+        # Genre keyword check
         if any(genre.lower() in message_lower for genre in self._genre_keywords):
             detected_genre = next((genre for genre in self._genre_keywords if genre.lower() in message_lower), "that")
             logger.info(f"Genre keyword detected: '{message_lower}'")
-            
-            # Make sure to include the FORCE redirect flag
-            return ToolResponse(
-                success=True,
-                output=f"Great! Let's create a story in the {detected_genre} genre. Taking you to the story creator now.",
-                message="REDIRECT_TO_STORY_CREATOR_FORCE"  # Critical for redirection
+            return ToolResponse.success(
+                f"Great! Let's create a story in the {detected_genre} genre. Taking you to the story creator now.",
+                message="REDIRECT_TO_STORY_CREATOR_FORCE"
             )
-        
-        
-        # Check direct FAQ patterns with debug logging
+
+        # FAQ pattern check
         for category, pattern in self._faq_patterns.items():
             keywords_found = [kw for kw in pattern["keywords"] if kw in message_lower]
             if keywords_found:
                 logger.info(f"✅ FAQ pattern matched: {category} for '{message_lower}', keywords: {keywords_found}")
-                return ToolResponse(
-                    success=True,
-                    output=FAQ_RESPONSES[pattern["response_key"]]
+                return ToolResponse.success(
+                    FAQ_RESPONSES[pattern["response_key"]]
                 )
-            else:
-                logger.debug(f"No match for {category}: none of {pattern['keywords']} found in '{message_lower}'")
-    
-        # If no pattern matched, log the failure
+
         logger.info(f"❌ No FAQ pattern matched for: '{message_lower}'")
 
-        # --- Story Creation Intent Detection ---
-        # Check for direct story creation intents FIRST
+        # Story intent check
         if any(keyword in message_lower for keyword in self._story_intent_keywords):
             logger.info(f"Story intent keyword detected: '{message_lower}'")
-            
-            # Check context for previous redirect attempts
             context = request.context or {}
             redirect_attempts = context.get("redirect_attempts", 0)
-            
             if redirect_attempts > 0:
-                # If already attempted to redirect, give a more direct message
-                return ToolResponse(
-                    success=True,
-                    output="I'm taking you to the story creator now! You'll be able to select your genre, mood, and length there.",
-                    message="REDIRECT_TO_STORY_CREATOR_FORCE"  # Special flag for forced redirect
+                return ToolResponse.success(
+                    "I'm taking you to the story creator now! You'll be able to select your genre, mood, and length there.",
+                    message="REDIRECT_TO_STORY_CREATOR_FORCE"
                 )
             else:
-                # First redirect attempt
-                # Update context to track that we've tried to redirect once
                 new_context = dict(context)
                 new_context["redirect_attempts"] = 1
                 request.context = new_context
-                
-                return ToolResponse(
-                    success=True,
-                    output="Great! Let's create your story.",
-                    message="REDIRECT_TO_STORY_CREATOR"  # Standard redirect flag
+                return ToolResponse.success(
+                    "Great! Let's create your story.",
+                    message="REDIRECT_TO_STORY_CREATOR"
                 )
-        
-        # (Removed redundant genre keyword check block; genre intent is already handled above.)
-        
+
         # --- Generative AI Fallback for Unmatched Queries ---
         try:
-            if client.GOOGLE_API_KEY:
-                # Craft a dynamic prompt for the generative AI
+            if hasattr(client, "GOOGLE_API_KEY") and client.GOOGLE_API_KEY:
                 prompt = self._construct_ai_prompt(request.input)
-                model = genai.GenerativeModel(self.model) # Use the model specified in __init__
-                
-                # Configure generation to be more concise and direct
-                generation_config = genai.GenerationConfig(
-                    temperature=0.4,  # Slightly lower temperature for more focused answers
-                    max_output_tokens=150, # Limit output length
-                )
-
-                response = model.generate_content(prompt, generation_config=generation_config)
-
-                if hasattr(response, 'text') and response.text:
-                    ai_response = response.text.strip()
+                llm_response = self.run(prompt=prompt)
+                ai_response = getattr(llm_response, "output", None) or getattr(llm_response, "text", None)
+                if ai_response:
                     logger.info(f"FAQAgent generated AI response for '{request.input}': {ai_response}")
-                    return ToolResponse(success=True, output=ai_response)
+                    return ToolResponse.success(ai_response)
                 else:
                     logger.warning(f"AI response for '{request.input}' was empty or malformed.")
             else:
                 logger.warning("No Google API key available for AI response generation. Falling back to default message.")
-
         except Exception as e:
-            logger.error(f"Error generating AI FAQ response for '{request.input}': {e}")
-            # Optionally, log the full traceback for debugging: logger.exception("Error generating AI response")
+            logger.exception(f"Error generating AI FAQ response for '{request.input}': {e}")
+            return ToolResponse.error("Sorry, our AI service is temporarily unavailable. Please try again later.")
 
         # --- Final Fallback ---
         logger.info(f"FAQAgent could not match or generate AI response for query '{request.input}'. Returning fallback message.")
-        return ToolResponse(success=True, output=FAQ_RESPONSES["DEFAULT_FALLBACK"], message=None)
+        return ToolResponse.success(FAQ_RESPONSES["DEFAULT_FALLBACK"])
 
     def _construct_ai_prompt(self, user_query: str) -> str:
         """Constructs the prompt for the generative AI model."""

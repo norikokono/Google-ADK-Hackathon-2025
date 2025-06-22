@@ -1,57 +1,38 @@
-import logging
-logger = logging.getLogger(__name__) # Moved this line to the very top
-
 import os
+from dotenv import load_dotenv
+
+# Your existing load_dotenv call:
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
+
+# --- Add this for debugging ---
+print(f"DEBUG: GOOGLE_API_KEY from os.environ: {os.environ.get('GOOGLE_API_KEY')}")
+# --- End debug ---
+
+import logging
 from datetime import datetime
 from typing import ClassVar, Set, Any, Dict, Optional
-import json
 
-# Local module imports
 from ..models.schemas import ToolRequest, ToolResponse
-
-# Third-party imports
 from google.adk.agents import LlmAgent
-import google.generativeai as genai
 
-# Import from your 'llms' directory
 try:
     from . import client
-    logger.debug("Successfully imported llms client utilities.")
 except ImportError:
-    logger.warning("Could not import llms client utilities. Ensure multi_tool_agent/llms/client.py exists if intended.")
-    client = None # Ensure client is None if import fails
+    client = None
 
-# Assuming these are properly defined in your config
-from multi_tool_agent.config.response import GREETING_RESPONSES, FAQ_RESPONSES, STORY_TEMPLATES, ERROR_MESSAGES
+from multi_tool_agent.config.response import GREETING_RESPONSES
 
+logger = logging.getLogger(__name__)
 
 class GreetingAgent(LlmAgent):
-    """
-    An agent that handles user greetings, provides a warm welcome,
-    and can identify an immediate intent to create a story.
-    """
-
-    # Class variables for common greetings and story creation keywords
     greetings: ClassVar[Set[str]] = {
         "hello", "hi", "hey", "greetings",
         "good morning", "good afternoon", "good evening",
         "howdy", "hola", "welcome", "plotbuddy", "plot buddy",
-        "start", "let's start" # Added "start" for general initiation
-    }
-
-    story_creation_keywords: ClassVar[Set[str]] = {
-        "create story", "write story", "make story",
-        "start writing", "begin story", "let's write", "ready to write",
-        "compose story", "tell me a story", "story" # Added 'story' for a broader match
+        "start", "let's start"
     }
 
     def __init__(self, model_name: str = "gemini-1.5-flash"):
-        """
-        Initializes the GreetingAgent.
-
-        Args:
-            model_name (str): The name of the generative model to use for personalized greetings.
-        """
         super().__init__(
             model=model_name,
             name="greeting_agent",
@@ -61,103 +42,36 @@ class GreetingAgent(LlmAgent):
         logger.info("GreetingAgent initialized.")
 
     def process(self, request: ToolRequest, context: Dict[str, Any] = None) -> ToolResponse:
-        """Process the greeting request"""
-        # Initialize context if None
-        if context is None:
-            context = {}
-            
-        user_id = request.user_id
-        message = request.input  # Changed from request.message
-        
-        # Check if this is a greeting or non-greeting query
-        message_lower = message.lower().strip()
-        
-        # Define greeting-specific keywords
-        greeting_keywords = ["hi", "hello", "hey", "howdy", "greetings", "good morning", 
-                            "good afternoon", "good evening", "hola", "welcome", "yo", "sup"]
-        
-        # Define clear NON-greeting keywords that should be handled by other agents
-        faq_keywords = ["what", "how", "who", "when", "where", "why", "tell me about", 
-                        "explain", "help", "genres", "pricing", "price", "prices", "cost", 
-                        "subscription", "hour", "contact", "support"]
-        
-        # If the message contains FAQ keywords or doesn't contain any greeting keywords,
-        # this is NOT a greeting and should be handled by another agent
-        if any(keyword in message_lower for keyword in faq_keywords):
-            logger.info(f"FAQ content detected in: '{message}' - declining to process")
-            return ToolResponse(success=False, message="Not a greeting message")
-        
-        if not any(word in message_lower for word in greeting_keywords):
+        message = request.input.strip()
+        message_lower = message.lower()
+
+        # Only respond to greetings
+        if not any(word in message_lower for word in self.greetings):
             logger.info(f"No greeting keywords found in: '{message}' - declining to process")
-            return ToolResponse(success=False, message="Not a greeting message")
-            
-        # Otherwise, proceed with normal greeting processing
-        # Determine time of day for fallback greeting
-        hour = datetime.now().hour # Use current local hour
-        if 5 <= hour < 12:
-            time_of_day = "morning"
-            fallback_response = GREETING_RESPONSES.get("morning", "Good morning!")
-        elif 12 <= hour < 18:
-            time_of_day = "afternoon"
-            fallback_response = GREETING_RESPONSES.get("afternoon", "Good afternoon!")
-        else:
-            time_of_day = "evening"
-            fallback_response = GREETING_RESPONSES.get("evening", "Good evening!")
+            return ToolResponse(success=False, output=None, message="Not a greeting message")
 
-        # Try to use LLM for personalized greeting
+        # Use ADK LlmAgent to generate a greeting
         try:
-            if client and hasattr(client, 'GOOGLE_API_KEY') and client.GOOGLE_API_KEY:
-                # Ensure the API key is configured if not already global
-                genai.configure(api_key=client.GOOGLE_API_KEY)
-
-                model = genai.GenerativeModel(self.model)
-
-                # Create personalized greeting prompt
-                # Improved prompt for more reliable LLM responses
-                prompt = f"""The user greeted you with: "{message}"
-
-You are PlotBuddy, a friendly and enthusiastic AI creative writing assistant.
-
-CRITICAL INSTRUCTIONS:
-- NEVER begin responses with phrases like "As an AI..." or "The user is asking..."
-- NEVER include your reasoning, analysis, or thought process
-- Respond directly as PlotBuddy in a warm, casual tone
-- Mention that it's currently {time_of_day} (e.g., "Good morning!")
-- Briefly mention that you help with creating stories
-- Include 1-2 relevant emojis
-- Keep your response VERY short - maximum 2 sentences
-- Do NOT ask questions like "How can I assist you today?" or "What would you like to do?".
-- Do NOT explicitly mention "AI", "model", or "I am an AI".
-- Gently invite them to create a story or ask for help, without directly asking a question.
-
-Now, craft your personalized greeting:
-"""
-
-                # Generate greeting with a low temperature for consistent, direct responses
-                generation_config = genai.GenerationConfig(
-                    temperature=0.7, # A bit of creativity, but still focused
-                    max_output_tokens=70 # Ensure conciseness
-                )
-                logger.info(f"Generating LLM greeting for input: '{message}' with time of day: {time_of_day}")
-                genai_response = model.generate_content(prompt, generation_config=generation_config)
-
-                if hasattr(genai_response, 'text') and genai_response.text.strip():
-                    llm_greeting = genai_response.text.strip()
-                    logger.info(f"Successfully generated personalized greeting with LLM: '{llm_greeting}'")
-                    return ToolResponse(success=True, output=llm_greeting)
-                else:
-                    logger.warning("LLM returned empty or malformed response, using fallback greeting.")
-            else:
-                logger.warning("Google API key not available for LLM greeting. Using fallback greeting.")
-
+            prompt = (
+                "You are PlotBuddy, a friendly creative writing assistant. "
+                "Greet the user warmly and encourage them to start writing a story."
+            )
+            llm_response = self.run(prompt=prompt)
+            output = getattr(llm_response, "output", None) or getattr(llm_response, "text", None)
+            if output:
+                return ToolResponse(success=True, output=output, message="Greeting generated by LLM.")
         except Exception as e:
-            logger.error(f"Error generating personalized greeting with LLM: {e}")
-            # Log full traceback for debugging
-            logger.exception("Details of LLM greeting error:")
+            logger.error(f"Error generating greeting with ADK LlmAgent: {e}")
 
-        # Fall back to template response if LLM fails or is not available
-        logger.info(f"Using template greeting as fallback for '{message}'.")
-        return ToolResponse(success=True, output=fallback_response)
+        # Fallback to static greeting
+        hour = datetime.now().hour
+        if hour < 12:
+            greeting = GREETING_RESPONSES.get("morning")
+        elif hour < 18:
+            greeting = GREETING_RESPONSES.get("afternoon")
+        else:
+            greeting = GREETING_RESPONSES.get("evening")
+        return ToolResponse(success=True, output=greeting, message="Fallback greeting.")
 
 
 # --- For local testing purposes ---

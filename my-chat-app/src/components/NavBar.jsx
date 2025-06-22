@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import './NavBar.css';
 
-const API_URL = 'http://localhost:8000'; // URL where your FastAPI server is running locally
+// const API_URL = 'http://localhost:8000'; // URL where your FastAPI server is running locally
 
 const NavBar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);

@@ -7,74 +7,58 @@ from typing import Dict, Any, List, Optional
 from ..models.schemas import ToolRequest, ToolResponse
 from google.adk.agents import LlmAgent
 
+try:
+    from . import client
+except ImportError:
+    client = None
+
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 class ProfileAgent:
     """Agent that serves as a personal creative coach, providing varied advice and support."""
 
     def __init__(self, model_name="gemini-1.5-flash"):
-        """Initialize the profile agent."""
         self.model_name = model_name
         logger.info(f"ProfileAgent initialized with model: {model_name}")
         self.user_profiles = {}  # Store user profiles
         self.interaction_history = {}  # Track interactions to prevent repetition
         
-        # Initialize creative coaching approaches for variety
         self.coaching_approaches = [
-            "socratic",       # Ask thought-provoking questions
-            "structural",     # Focus on organization and structure
-            "motivational",   # Encourage and inspire
-            "technical",      # Provide practical techniques
-            "explorative",    # Help explore new directions
-            "reflective",     # Encourage introspection
-            "analytical",     # Help analyze existing ideas
-            "contrasting"     # Present contrasting viewpoints
+            "socratic", "structural", "motivational", "technical",
+            "explorative", "reflective", "analytical", "contrasting"
         ]
 
     def process(self, request: ToolRequest) -> ToolResponse:
-        """Process a request for creative coaching and advice."""
         user_id = request.user_id or "anonymous_user"
         user_message = request.input.strip() if request.input else ""
         context = request.context or {}
         
-        # Initialize or retrieve user profile
-        if user_id not in self.user_profiles:
-            self.user_profiles[user_id] = self._create_initial_profile()
-        
-        # Initialize interaction history if needed
+        profile = self._get_user_profile(user_id)
+
         if user_id not in self.interaction_history:
             self.interaction_history[user_id] = {
-                "last_approaches": [],  # Track recently used coaching approaches
-                "last_topics": [],      # Track recently discussed topics
-                "last_advice": [],      # Track recently given advice
+                "last_approaches": [],
+                "last_topics": [],
+                "last_advice": [],
                 "interaction_count": 0
             }
         
-        profile = self.user_profiles[user_id]
         history = self.interaction_history[user_id]
         history["interaction_count"] += 1
         
-        # Handle specific API endpoints
         if context.get("brainstorm"):
             return self._provide_creative_coaching(user_id, profile, context, history)
-        
         if context.get("advice"):
             return self._provide_contextual_advice(user_id, profile, context, history)
-            
-        # Handle other message types (profile commands, general queries, etc.)
         if user_message.lower().startswith("/profile"):
             return self._handle_profile_command(user_id, user_message, profile)
-            
-        # Check if we should provide creative coaching
         if any(keyword in user_message.lower() for keyword in ["stuck", "advice", "help", "idea", "suggestion", "feedback"]):
             extracted_topic = self._extract_topic(user_message)
             return self._provide_creative_coaching(user_id, profile, {"topic": extracted_topic}, history)
-            
-        # Default to profile information for other queries
         return self._handle_general_query(user_id, user_message, profile, history)
     
     def _create_initial_profile(self) -> Dict[str, Any]:
-        """Create an initial user profile with default values."""
         return {
             "created_at": datetime.now(),
             "last_updated": datetime.now(),
@@ -84,11 +68,11 @@ class ProfileAgent:
                 "email": ""
             },
             "creative_preferences": {
-                "domains": [],             # e.g., fiction, poetry, screenwriting
-                "genres": [],              # e.g., fantasy, sci-fi, romance
-                "themes": [],              # e.g., redemption, exploration, conflict
-                "creative_process": "",    # e.g., outliner, pantser, hybrid
-                "feedback_style": "balanced"  # direct, gentle, balanced
+                "domains": [],
+                "genres": [],
+                "themes": [],
+                "creative_process": "",
+                "feedback_style": "balanced"
             },
             "creative_goals": {
                 "current_project": "",
@@ -104,91 +88,39 @@ class ProfileAgent:
         }
     
     def _select_coaching_approach(self, history: Dict[str, Any]) -> str:
-        """Select a coaching approach that hasn't been used recently."""
         recent_approaches = history.get("last_approaches", [])
         available_approaches = [a for a in self.coaching_approaches if a not in recent_approaches]
-        
-        # If all approaches have been used recently, reset and use any
         if not available_approaches:
             available_approaches = self.coaching_approaches
-        
         selected_approach = random.choice(available_approaches)
-        
-        # Update history with this approach
         recent_approaches.append(selected_approach)
-        if len(recent_approaches) > 3:  # Keep track of last 3 approaches
+        if len(recent_approaches) > 3:
             recent_approaches.pop(0)
         history["last_approaches"] = recent_approaches
-        
         return selected_approach
     
     def _provide_creative_coaching(self, user_id: str, profile: Dict[str, Any], context: Dict[str, Any], history: Dict[str, Any]) -> ToolResponse:
-        """Provide personalized creative coaching with varied approaches."""
-        # Extract context
         genre = context.get("genre", "")
         mood = context.get("mood", "")
         topic = context.get("topic", "")
-        
-        # Update profile stats
         profile["stats"]["coaching_sessions"] += 1
         profile["stats"]["last_activity"] = datetime.now()
-        
-        # Select a coaching approach that hasn't been used recently
         approach = self._select_coaching_approach(history)
-        
         try:
-            # Get user's creative preferences
             domains = ", ".join(profile["creative_preferences"]["domains"]) if profile["creative_preferences"]["domains"] else "various"
             genres = ", ".join(profile["creative_preferences"]["genres"]) if profile["creative_preferences"]["genres"] else genre or "any"
             process = profile["creative_preferences"]["creative_process"] or "flexible"
-            
-            # Construct prompt based on selected approach
             approach_prompts = {
-                "socratic": f"""
-                    As a creative coach using the Socratic approach, ask 2-3 thought-provoking questions 
-                    that will help the creator think deeply about their {genres} project.
-                    Focus on questions that reveal new angles or perspectives they may not have considered.
-                    Avoid giving direct answers or solutions.
-                """,
-                "structural": f"""
-                    As a creative coach focusing on structure, provide specific organizational 
-                    techniques relevant to {genres} creation that the creator might find helpful.
-                    Offer 1-2 practical frameworks or structural elements they could experiment with.
-                """,
-                "motivational": f"""
-                    As a motivational creative coach, provide encouraging perspective on challenges 
-                    common in {genres} creation. Acknowledge the difficulty while emphasizing 
-                    the creator's capacity to overcome. Include a specific example of how a 
-                    challenge can be reframed as an opportunity.
-                """,
-                "technical": f"""
-                    As a technical creative coach, share 1-2 specific techniques or exercises 
-                    that could help advance a {genres} project. These should be concrete, 
-                    actionable practices they can implement immediately.
-                """,
-                "explorative": f"""
-                    As an explorative creative coach, suggest 2-3 unconventional directions 
-                    or experiments the creator might try with their {genres} project. Focus on 
-                    unexpected angles or approaches that could yield fresh insights.
-                """,
-                "reflective": f"""
-                    As a reflective creative coach, guide the creator to examine their own 
-                    creative process in {genres} work. Suggest a specific reflective exercise 
-                    or journaling prompt that might reveal insights about their approach.
-                """,
-                "analytical": f"""
-                    As an analytical creative coach, provide a framework for evaluating 
-                    their current {genres} project. Suggest 2-3 specific elements they 
-                    might analyze to identify strengths and areas for development.
-                """,
-                "contrasting": f"""
-                    As a creative coach using contrasting perspectives, present two 
-                    different approaches to a common challenge in {genres} creation. 
-                    Highlight the benefits of each approach without suggesting one is better.
-                """
+                "socratic": f"As a creative coach using the Socratic approach, ask 2-3 thought-provoking questions about their {genres} project. Avoid giving direct answers.",
+                "structural": f"As a creative coach focusing on structure, provide 1-2 organizational techniques for {genres} creation.",
+                "motivational": f"As a motivational coach, encourage and give perspective on challenges in {genres} creation. Include a reframing example.",
+                "technical": f"As a technical coach, share 1-2 actionable techniques for a {genres} project.",
+                "explorative": f"As an explorative coach, suggest 2-3 unconventional directions for their {genres} project.",
+                "reflective": f"As a reflective coach, guide the creator to examine their own creative process in {genres} work. Suggest a specific reflective exercise or journaling prompt.",
+                "analytical": f"As an analytical coach, provide a framework for evaluating their current {genres} project. Suggest 2-3 specific elements they might analyze.",
+                "contrasting": f"As a coach using contrasting perspectives, present two different approaches to a common challenge in {genres} creation. Highlight the benefits of each approach."
             }
             
-            # Build the full prompt
             prompt = f"""
             You are a creative coach specializing in helping creators with their projects.
             
@@ -215,10 +147,9 @@ class ProfileAgent:
             
             output = response.text.strip()
             
-            # Store this advice in history to avoid repetition
             recent_advice = history.get("last_advice", [])
-            recent_advice.append(output[:100])  # Store truncated version to save space
-            if len(recent_advice) > 5:  # Keep track of last 5 pieces of advice
+            recent_advice.append(output[:100])
+            if len(recent_advice) > 5:
                 recent_advice.pop(0)
             history["last_advice"] = recent_advice
             
@@ -229,7 +160,6 @@ class ProfileAgent:
         except Exception as e:
             logger.error(f"Error providing creative coaching: {e}")
             
-            # Fallback responses based on approach
             fallback_responses = {
                 "socratic": f"What aspect of your {genre} project feels most challenging right now? Have you considered how your audience might experience the {mood} elements you're incorporating?",
                 "structural": f"For {genre} projects, creating a visual map of key elements can help see connections. Try arranging your main components on paper and drawing relationships between them.",
@@ -247,16 +177,13 @@ class ProfileAgent:
             )
     
     def _provide_contextual_advice(self, user_id: str, profile: Dict[str, Any], context: Dict[str, Any], history: Dict[str, Any]) -> ToolResponse:
-        """Provide contextual advice with variety based on the user's current activity."""
         context_type = context.get("context", "")
         genre = context.get("genre", "")
         mood = context.get("mood", "")
         
-        # Select an approach that's different from recent ones
         approach = self._select_coaching_approach(history)
         
         try:
-            # Get context-specific advice
             context_prompts = {
                 "story_creation": f"""
                     The creator is starting a new {genre} story with a {mood} tone.
@@ -280,7 +207,6 @@ class ProfileAgent:
                 """
             }
             
-            # Default context if not specified
             context_prompt = context_prompts.get(context_type, f"""
                 The creator is working on a {genre} project with a {mood} tone.
                 Focus your coaching on providing general creative guidance that's immediately applicable.
@@ -315,9 +241,8 @@ class ProfileAgent:
             
             output = response.text.strip()
             
-            # Store this advice in history to avoid repetition
             recent_advice = history.get("last_advice", [])
-            recent_advice.append(output[:100])  # Store truncated version
+            recent_advice.append(output[:100])
             if len(recent_advice) > 5:
                 recent_advice.pop(0)
             history["last_advice"] = recent_advice
@@ -329,7 +254,6 @@ class ProfileAgent:
         except Exception as e:
             logger.error(f"Error providing contextual advice: {e}")
             
-            # Varied fallback responses
             fallbacks = [
                 f"Consider how the {mood} elements in your {genre} piece could be enhanced through sensory details. What emotions are you hoping your audience will experience?",
                 f"Try the 'opposite exercise' - briefly imagine your {genre} piece with the opposite {mood} tone. What insights does this contrast reveal about your creative intentions?",
@@ -344,7 +268,6 @@ class ProfileAgent:
             )
     
     def _handle_profile_command(self, user_id: str, message: str, profile: Dict[str, Any]) -> ToolResponse:
-        """Handle profile-related commands."""
         parts = message.split(maxsplit=2)
         command = parts[1].lower() if len(parts) > 1 else "view"
         
@@ -373,12 +296,9 @@ class ProfileAgent:
             )
     
     def _handle_general_query(self, user_id: str, message: str, profile: Dict[str, Any], history: Dict[str, Any]) -> ToolResponse:
-        """Handle general queries with creative coaching perspective."""
-        # Select a different approach each time
         approach = self._select_coaching_approach(history)
         
         try:
-            # Get user's creative context
             domains = ", ".join(profile["creative_preferences"]["domains"]) if profile["creative_preferences"]["domains"] else "various"
             genres = ", ".join(profile["creative_preferences"]["genres"]) if profile["creative_preferences"]["genres"] else "various"
             
@@ -418,7 +338,6 @@ class ProfileAgent:
                     message="Not a creative coaching related message"
                 )
             
-            # Store this advice to avoid repetition
             recent_advice = history.get("last_advice", [])
             recent_advice.append(output[:100])
             if len(recent_advice) > 5:
@@ -438,7 +357,6 @@ class ProfileAgent:
             )
     
     def _extract_topic(self, message: str) -> str:
-        """Extract the creative topic from a message."""
         lower_msg = message.lower()
         
         topic = ""
@@ -458,7 +376,6 @@ class ProfileAgent:
         return topic
     
     def _update_profile_settings(self, user_id: str, setting: str, profile: Dict[str, Any]) -> ToolResponse:
-        """Update user profile settings based on command."""
         setting_lower = setting.lower()
         profile["last_updated"] = datetime.now()
         
@@ -523,14 +440,12 @@ class ProfileAgent:
         )
     
     def _generate_profile_summary(self, profile: Dict[str, Any]) -> str:
-        """Generate a user-friendly summary of the user's creative profile."""
         name = profile["personal_info"]["name"] or "Not set"
         
         domains = ", ".join(profile["creative_preferences"]["domains"]) if profile["creative_preferences"]["domains"] else "Not specified"
         genres = ", ".join(profile["creative_preferences"]["genres"]) if profile["creative_preferences"]["genres"] else "Not specified"
         process = profile["creative_preferences"]["creative_process"] or "Not specified"
         
-        # Get goals
         short_goals = "\n  • " + "\n  • ".join(profile["creative_goals"]["short_term"]) if profile["creative_goals"]["short_term"] else "None set"
         challenges = "\n  • " + "\n  • ".join(profile["creative_goals"]["challenges"]) if profile["creative_goals"]["challenges"] else "None set"
         
@@ -558,6 +473,12 @@ Update your profile with commands like:
 '/profile set genre fantasy' or '/profile set process outliner'
 """
         return summary
+    
+    def _get_user_profile(self, user_id: str) -> dict:
+        """Return the user's profile dict, creating it if it doesn't exist."""
+        if user_id not in self.user_profiles:
+            self.user_profiles[user_id] = self._create_initial_profile()
+        return self.user_profiles[user_id]
 
 
 # For testing this agent in isolation

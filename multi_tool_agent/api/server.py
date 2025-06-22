@@ -1,46 +1,65 @@
 import os
 import logging
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse  # Add this import
+import random
+from fastapi import FastAPI, HTTPException, Request, Depends
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
-import random
 
 # Load environment variables from project root
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"))
 
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)  # Changed from INFO to DEBUG
 
-# Configure Google Generative AI
-import google.generativeai as genai
+# Remove direct Gemini API usage (handled by ADK agents)
+# The `import google.generativeai as genai` line can likely be removed if no direct genai calls are made here,
+# as ADK agents handle it internally. For now, leaving it as it causes no harm.
+# The genai.configure() call from the previous version has been removed as you indicated
+# "Remove direct Gemini API usage (handled by ADK agents)".
+# The API key warning block remains good practice.
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-if GOOGLE_API_KEY:
-    genai.configure(api_key=GOOGLE_API_KEY)
-    logger.info("Google Generative AI configured successfully.")
-else:
+print("GOOGLE_API_KEY:", GOOGLE_API_KEY)
+if not GOOGLE_API_KEY:
     logger.critical("GOOGLE_API_KEY environment variable not found. LLM calls will fail. "
                     "Ensure GOOGLE_API_KEY is set in your environment variables or .env file.")
 
-# Import your agent
+
+# Import your agents and schemas
 from ..agents.story import StoryAgent
-from ..models.schemas import ToolRequest, ToolResponse
-from ..agents.profile import ProfileAgent  # New import
+from ..models.schemas import ToolRequest
+from ..agents.profile import ProfileAgent
+from ..agents.orchestrator import OrchestratorAgent
+
+# Instantiate the orchestrator (singleton or otherwise)
+orchestrator = OrchestratorAgent()
 
 app = FastAPI()
 
-# Allow all origins for development (customize for production)
+# --- CORS Configuration ---
+allowed_origins_str = os.getenv(
+    "CORS_ALLOWED_ORIGINS",
+    "http://localhost:3000,https://adk-hackathon-2025-b4bfc.web.app"
+)
+allowed_origins = [origin.strip() for origin in allowed_origins_str.split(',')]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Or specify your frontend URL(s)
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# --- End CORS Configuration ---
 
-story_agent = StoryAgent()
-profile_agent = ProfileAgent(model_name="gemini-1.5-flash")  # Ensure profile agent is initialized
+def get_story_agent():
+    """Dependency injector for StoryAgent."""
+    return StoryAgent()
+
+def get_profile_agent():
+    """Dependency injector for ProfileAgent."""
+    return ProfileAgent(model_name="gemini-1.5-flash")
 
 class StoryRequest(BaseModel):
     user_id: str
@@ -49,228 +68,178 @@ class StoryRequest(BaseModel):
     length: str
 
 @app.post("/api/story/create")
-async def create_story(request: Request):
+async def create_story(request: Request, story_agent: StoryAgent = Depends(get_story_agent)):
     try:
         data = await request.json()
         user_id = data.get('user_id', 'anonymous_user')
-        genre = data.get('genre', '')
-        mood = data.get('mood', '')
-        length = data.get('length', 'short')
-        
-        logger.debug(f"Story request from {user_id}: genre={genre}, mood={mood}, length={length}")
-        
-        # Use only the parameters that _generate_story actually accepts
-        story = story_agent._generate_story(
-            genre=genre,
-            mood=mood,
-            length=length,
-            user_id=user_id
-            # Remove characters and plot_elements parameters
+
+        if data.get('random', False):
+            try:
+                genre = random.choice(story_agent._valid_genres or ["fantasy"])
+                mood = random.choice(story_agent._valid_moods or ["mysterious"])
+                length = random.choice(story_agent._valid_lengths or ["short"])
+            except Exception as e:
+                logger.error(f"Error selecting random parameters for story creation: {e}")
+                genre, mood, length = "fantasy", "mysterious", "short"
+            logger.debug(f"Random story request for {user_id}: Create a {length} {genre} story with a {mood} mood")
+        else:
+            genre = data.get("genre")
+            mood = data.get("mood")
+            length = data.get("length")
+            logger.debug(f"Story request from {user_id}: genre={genre}, mood={mood}, length={length}")
+
+        if not all([genre, mood, length]):
+            raise HTTPException(status_code=400, detail="Genre, mood, and length are required for non-random story creation.")
+
+        tool_request = ToolRequest(
+            user_id=user_id,
+            input={
+                "genre": genre,
+                "mood": mood,
+                "length": length
+            }
         )
-        
-        # Return the complete story response
-        return {
+
+        result = story_agent.process(tool_request)
+        if not result or not hasattr(result, 'output') or not result.success:
+            logger.error(f"StoryAgent returned invalid or unsuccessful response for user {user_id}: {result.message if result else 'No result'}")
+            return JSONResponse(status_code=500, content={"success": False, "message": result.message if result else "Failed to generate story due to an internal error."})
+
+        response = {
             "success": True,
-            "output": story,
-            "story": story,
-            "title": data.get('title', f"{mood.capitalize()} {genre.capitalize()} Tale"),
-            "isComplete": True
+            "story": result.output,
+            "parameters": {
+                "genre": genre,
+                "mood": mood,
+                "length": length
+            }
         }
-        
+        return JSONResponse(content=response)
+
+    except HTTPException as http_e:
+        raise http_e
     except Exception as e:
-        logger.error(f"StoryAgent error: {e}", exc_info=True)
-        return {
-            "success": False,
-            "output": "Sorry, I couldn't create a story right now. Please try again.",
-            "message": str(e)
-        }
+        logger.exception(f"Unhandled error in create_story endpoint for user {user_id}: {e}")
+        return JSONResponse(status_code=500, content={"success": False, "message": "An unexpected error occurred while generating the story."})
 
 @app.post("/api/chat")
 async def chat(request: Request):
     try:
         data = await request.json()
-        user_input = data.get('input', '') or data.get('message', '')
         user_id = data.get('user_id', 'anonymous_user')
-        
+        user_input = data.get('input', '')
+
         logger.debug(f"Chat request from {user_id}: '{user_input}'")
-        
-        if not user_input or user_input.strip() == "":
+
+        if not user_input:
             return JSONResponse(
                 status_code=400,
                 content={
                     "success": False,
-                    "output": "Hello! I'm PlotBuddy. Please send a message to start our conversation.",
-                    "error": "empty_message"
+                    "output": "I didn't receive any input. What would you like to talk about?",
+                    "message": "No input provided."
                 }
             )
-        
-        # Create tool request
+
         tool_request = ToolRequest(user_id=user_id, input=user_input)
-        
-        # Import orchestrator here to avoid circular imports
-        from ..agents.orchestrator import orchestrator
-        
-        # Let the orchestrator handle all intent detection and routing
-        response = orchestrator.process_message(user_id, tool_request)
-        
-        # Debug the response
-        logger.debug(f"FULL RESPONSE: output={response.output}, message={response.message}")
-        
-        # Check for the story redirect signal
-        if response.message == "REDIRECT_TO_STORY_CREATOR":
-            return {
-                "success": True,
-                "output": response.output,
-                "message": response.message,
-                "action": "navigate_to_story_creator"  # Add this field for the frontend
+        # FIX APPLIED HERE: Pass user_id as the first argument
+        response = orchestrator.process(user_id, tool_request) 
+        success = getattr(response, "success", False)
+        output = getattr(response, "output", "")
+        message = getattr(response, "message", "No message returned from orchestrator.")
+        logger.debug(
+            f"FULL RESPONSE from orchestrator for {user_id}: success={success}, output={output}, message={message}"
+        )
+        return JSONResponse(
+            content={
+                "success": success,
+                "output": output,
+                "message": message
             }
-        
-        # Return a normal response
-        return {
-            "success": response.success,
-            "output": response.output,
-            "message": response.message
-        }
-    
+        )
     except Exception as e:
-        logger.error(f"Chat error: {e}")
-        return {
-            "success": False, 
-            "output": "Sorry, an error occurred. Please try again."
-        }
+        logger.exception(f"Unhandled error in chat endpoint: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "output": "I'm sorry, I encountered an error. Please try again later.",
+                "message": str(e)
+            }
+        )
 
 @app.post("/api/profile")
-async def get_profile(request: Request):  # Use FastAPI Request
+async def get_profile(request: Request, profile_agent: ProfileAgent = Depends(get_profile_agent)):
     try:
-        # Get data from request
-        data = await request.json()  # Use await with FastAPI request
+        data = await request.json()
         user_id = data.get('user_id', 'default')
-        
-        # Use ProfileAgent to get profile data
-        from ..agents.profile import ProfileAgent
-        profile_agent = ProfileAgent()
-        
-        # Get the user profile
         user_profile = profile_agent._get_user_profile(user_id)
-        
-        # Return directly - FastAPI will handle the JSON conversion
-        return user_profile
-        
+        return JSONResponse(content=user_profile)
     except Exception as e:
-        logger.error(f"Profile error: {e}")
-        return {
+        logger.exception(f"Profile error for user {user_id}: {e}")
+        return JSONResponse(status_code=500, content={
+            "success": False,
             "error": str(e),
-            "subscription": "Free Trial",  # Fallback data
-            "stories_remaining": 2, 
+            "subscription": "Free Trial",
+            "stories_remaining": 2,
             "created_stories": 0,
             "member_since": "2024",
-            "favorite_genres": ["Fantasy", "Mystery"]
-        }
+            "favorite_genres": ["Fantasy", "Mystery"],
+            "message": "Failed to load profile. Displaying default data."
+        })
 
 @app.post("/api/debug")
 async def debug_greeting():
-    """Debug endpoint to test direct greeting agent calls."""
     from ..agents.greeting import GreetingAgent
     agent = GreetingAgent()
     request = ToolRequest(user_id="test_user", input="hi")
     response = agent.process(request)
-    return {"success": response.success, "output": response.output, "message": response.message}
+    return JSONResponse(content={"success": response.success, "output": response.output, "message": response.message})
 
 @app.post("/api/profile/brainstorm")
-async def profile_brainstorm(request: Request):
-    """Endpoint for brainstorming ideas with the profile agent."""
+async def profile_brainstorm(request: Request, profile_agent: ProfileAgent = Depends(get_profile_agent)):
     try:
         data = await request.json()
         genre = data.get('genre', '')
         mood = data.get('mood', '')
         length = data.get('length', '')
-        
-        # Create a request object for the profile agent
+        user_id = data.get('user_id', 'anonymous_user')
+
         tool_request = ToolRequest(
             input=f"I need brainstorming help for a {mood} {genre} story of {length} length",
-            user_id=data.get('userId', 'anonymous'),
+            user_id=user_id,
             context={"brainstorm": True, "genre": genre, "mood": mood, "length": length}
         )
-        
-        # Process with profile agent
         response = profile_agent.process(tool_request)
-        
-        return {"success": response.success, "output": response.output}
+        return JSONResponse(content={"success": response.success, "output": response.output, "message": response.message})
     except Exception as e:
-        logger.exception(f"Error in profile brainstorming: {e}")
-        return {"success": False, "output": "Sorry, I encountered an error while brainstorming."}
+        logger.exception(f"Error in profile brainstorming for user {user_id}: {e}")
+        return JSONResponse(status_code=500, content={"success": False, "output": "Sorry, I encountered an error while brainstorming.", "message": str(e)})
 
 @app.post("/api/profile/advice")
-async def profile_advice(request: Request):
-    """Endpoint for getting contextual advice from the profile agent."""
+async def profile_advice(request: Request, profile_agent: ProfileAgent = Depends(get_profile_agent)):
     try:
         data = await request.json()
-        context = data.get('context', '')
+        context_text = data.get('context', '')
         genre = data.get('genre', '')
         mood = data.get('mood', '')
-        
-        # Create a request object for the profile agent
+        user_id = data.get('user_id', 'anonymous_user')
+
         tool_request = ToolRequest(
             input=f"Give me advice about creating a {mood} {genre} story",
-            user_id=data.get('userId', 'anonymous'),
-            context={"advice": True, "context": context, "genre": genre, "mood": mood}
-        )
-        
-        # Process with profile agent
-        response = profile_agent.process(tool_request)
-        
-        return {"success": response.success, "output": response.output}
-    except Exception as e:
-        logger.exception(f"Error in profile advice: {e}")
-        return {"success": False, "output": "Sorry, I encountered an error while providing advice."}
-
-@app.post("/api/ai/recommendations")
-async def ai_recommendations(request: Request):
-    try:
-        data = await request.json()
-        user_id = data.get('user_id', 'anonymous_user')
-        content_type = data.get('contentType', 'genre')  # What kind of recommendations (genre, mood, etc.)
-        current_selection = data.get('currentSelection', {})  # User's current choices
-        
-        logger.debug(f"AI recommendations request from {user_id}: type={content_type}")
-        
-        # Import recommendation agent or use existing agents
-        # You can use orchestrator or a specific agent for recommendations
-        from ..agents.orchestrator import orchestrator
-        
-        # Create a tool request for recommendations
-        tool_request = ToolRequest(
             user_id=user_id,
-            input=f"recommend {content_type}",
-            params={
-                "content_type": content_type,
-                "current_selection": current_selection
-            }
+            context={"advice": True, "context": context_text, "genre": genre, "mood": mood}
         )
-        
-        # Process with orchestrator to get recommendations
-        # If you have a specialized recommendations agent, use that instead
-        response = orchestrator.get_recommendations(content_type, current_selection)
-        
-        # Return recommendations
-        return {
-            "success": True,
-            "recommendations": [
-                # Default recommendations if none available from agent
-                {"id": 1, "title": "Default Recommendation 1", "genre": "Fantasy", "mood": "Adventurous"},
-                {"id": 2, "title": "Default Recommendation 2", "genre": "Mystery", "mood": "Suspenseful"}
-            ]
-        }
+        response = profile_agent.process(tool_request)
+        return JSONResponse(content={"success": response.success, "output": response.output, "message": response.message})
     except Exception as e:
-        logger.error(f"Recommendations error: {e}")
-        return {
-            "success": False,
-            "output": "Sorry, I couldn't fetch recommendations right now. Please try again."
-        }
+        logger.exception(f"Error in profile advice for user {user_id}: {e}")
+        return JSONResponse(status_code=500, content={"success": False, "output": "Sorry, I encountered an error while providing advice.", "message": str(e)})
 
 def main():
     import uvicorn
-    uvicorn.run("multi_tool_agent.api.server:app", host="0.0.0.0", port=8000, reload=True)
+    # Removed reload=True for production builds as it's not typically needed in Cloud Run
+    uvicorn.run("multi_tool_agent.api.server:app", host="0.0.0.0", port=8080)
 
 if __name__ == "__main__":
     main()

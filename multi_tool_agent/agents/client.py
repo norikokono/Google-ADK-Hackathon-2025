@@ -1,15 +1,28 @@
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env if present
+load_dotenv()
+
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 import logging
-import google.generativeai as genai
+from dotenv import load_dotenv
 from flask import Flask, request, jsonify
+from flask_cors import CORS
+import google.generativeai as genai
+
+# Load environment variables from .env if present
+load_dotenv()
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 if GOOGLE_API_KEY:
-    genai.configure(api_key=GOOGLE_API_KEY)
+    genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
     logger.info("Google Generative AI configured successfully.")
 else:
     logger.critical(
@@ -24,14 +37,19 @@ def chat():
         user_id = request.json.get('user_id', 'anonymous_user')
         logger.info(f"Received message from {user_id}: {user_message}")
 
-        # Call your agent manager here, e.g.:
-        # response = manager.process_message(user_id, ToolRequest(user_id=user_id, input=user_message))
-        # return jsonify({"output": response.output, "success": response.success})
+        if not GOOGLE_API_KEY:
+            return jsonify({
+                "output": "Sorry, the AI service is not available (missing API key).",
+                "success": False
+            }), 503
 
-        # TEMP: Dummy response for debugging
-        response_message = "This is the bot's response message"
+        # Example: Use Gemini 1.5 Flash Latest (update model as needed)
+        model = genai.GenerativeModel("gemini-1.5-flash-latest")
+        response = model.generate_content(user_message)
+        output = response.text if hasattr(response, "text") else str(response)
+
         return jsonify({
-            "output": response_message,
+            "output": output,
             "success": True
         })
     except Exception as e:

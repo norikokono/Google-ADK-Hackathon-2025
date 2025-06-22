@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import './StoryGuide.css';
-
-const API_URL = 'http://localhost:8000'; // URL where your FastAPI server is running locally
+import { fetchAPI } from '../utils/api';
 
 const StoryGuide = () => {
   const [generatedStory, setGeneratedStory] = useState('');
@@ -147,7 +146,7 @@ const StoryGuide = () => {
     
     try {
       // Call your API to generate the actual story
-      const response = await fetch(`${API_URL}/api/generate-story`, {
+      const data = await fetchAPI('/api/generate-story', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -156,8 +155,6 @@ const StoryGuide = () => {
           length: randomLength.name
         })
       });
-      
-      const data = await response.json();
       setGeneratedStory(data.story);
     } catch (error) {
       console.error('Error generating story:', error);
@@ -175,16 +172,16 @@ const StoryGuide = () => {
       </header>
 
       <section className="examples" style={{ 
-        margin: '0 0 15px 0',  // Reduced bottom margin
-        padding: '0'           // Removed padding
+        margin: '0 0 15px 0',
+        padding: '0'
       }}>
         <h2 style={{ 
-          marginBottom: '6px',  // Reduced space after heading
-          fontSize: '1.2em'     // Slightly smaller heading
+          marginBottom: '6px',
+          fontSize: '1.2em'
         }}>✨ Quick Examples</h2>
         <ul style={{ 
           margin: '0', 
-          padding: '0 0 0 5px',  // Only keep minimal left padding
+          padding: '0 0 0 5px',
           listStylePosition: 'inside' 
         }}>
           <li style={{ margin: '1px 0', fontSize: '0.95em' }}>mystery | mysterious | short - Perfect for beginners</li>
@@ -198,11 +195,11 @@ const StoryGuide = () => {
       <div className="categories-grid" style={{ 
         display: 'grid', 
         gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
-        gap: '15px',  // Reduced gap between grid items
+        gap: '15px',
         marginBottom: '20px'
       }}>
-        <section className="category" style={{ margin: 0 }}>  {/* Removed margin */}
-          <h2 style={{ marginBottom: '8px' }}>🎭 Genres</h2>  {/* Reduced bottom margin */}
+        <section className="category" style={{ margin: 0 }}>
+          <h2 style={{ marginBottom: '8px' }}>🎭 Genres</h2>
           <ul style={{ 
             margin: 0, 
             padding: 0, 
@@ -210,9 +207,9 @@ const StoryGuide = () => {
           }}>
             {categories.genres.map(genre => (
               <li key={genre.name} style={{ 
-                margin: '2px 0',  // Minimal vertical spacing
+                margin: '2px 0',
                 paddingLeft: '5px',
-                fontSize: '0.95em'  // Slightly smaller font
+                fontSize: '0.95em'
               }}>
                 <strong>{genre.name}</strong> - {genre.description}
               </li>
@@ -220,8 +217,8 @@ const StoryGuide = () => {
           </ul>
         </section>
 
-        <section className="category" style={{ margin: 0 }}>  {/* Removed margin */}
-          <h2 style={{ marginBottom: '8px' }}>🌟 Moods</h2>  {/* Reduced bottom margin */}
+        <section className="category" style={{ margin: 0 }}>
+          <h2 style={{ marginBottom: '8px' }}>🌟 Moods</h2>
           <ul style={{ 
             margin: 0, 
             padding: 0, 
@@ -229,9 +226,9 @@ const StoryGuide = () => {
           }}>
             {categories.moods.map(mood => (
               <li key={mood.name} style={{ 
-                margin: '2px 0',  // Minimal vertical spacing
+                margin: '2px 0',
                 paddingLeft: '5px',
-                fontSize: '0.95em'  // Slightly smaller font
+                fontSize: '0.95em'
               }}>
                 <strong>{mood.name}</strong> - {mood.description}
               </li>
@@ -239,8 +236,8 @@ const StoryGuide = () => {
           </ul>
         </section>
 
-        <section className="category" style={{ margin: 0 }}>  {/* Removed margin */}
-          <h2 style={{ marginBottom: '8px' }}>📏 Lengths</h2>  {/* Reduced bottom margin */}
+        <section className="category" style={{ margin: 0 }}>
+          <h2 style={{ marginBottom: '8px' }}>📏 Lengths</h2>
           <ul style={{ 
             margin: 0, 
             padding: 0, 
@@ -248,9 +245,9 @@ const StoryGuide = () => {
           }}>
             {categories.lengths.map(length => (
               <li key={length.name} style={{ 
-                margin: '2px 0',  // Minimal vertical spacing
+                margin: '2px 0',
                 paddingLeft: '5px',
-                fontSize: '0.95em'  // Slightly smaller font
+                fontSize: '0.95em'
               }}>
                 <strong>{length.name}</strong> - {length.description}
               </li>
@@ -270,13 +267,6 @@ const StoryGuide = () => {
           <li>Mix timeframes: historical + chaotic, scifi + melancholic</li>
         </ul>
       </section>
-      
-      {generatedStory && (
-        <section className="generated-story">
-          <h2>Generated Story</h2>
-          <p style={{ whiteSpace: 'pre-wrap' }}>{generatedStory}</p>
-        </section>
-      )}
     </div>
   );
 };

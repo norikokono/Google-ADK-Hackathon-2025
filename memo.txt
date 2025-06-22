@@ -96,9 +96,10 @@ your_project_root/
 
 
 python -m multi_tool_agent.api.server
-
+uvicorn multi_tool_agent.api.server:app --reload
 python test_story.py
-lsof -ti:8000 | xargs kill
+
+lsof -ti:8080 | xargs kill
 
 
 
@@ -125,3 +126,24 @@ Google-ADK-Hackathon/
 
 
 Hosting URL: https://adk-hackathon-2025-b4bfc.web.app
+
+# 1. my-chat-app
+npm run builds
+firebase deploy
+
+# 2. root
+gcloud builds submit --tag gcr.io/adk-hackathon-2025-b4bfc/plotbuddy-api
+gcloud run deploy plotbuddy-api \
+  --image gcr.io/adk-hackathon-2025-b4bfc/plotbuddy-api \
+  --platform managed \
+  --region us-central1 \
+  --allow-unauthenticated
+
+# 3. root
+firebase deploy --only hosting
+
+
+
+# Deploy the NEWLY BUILT image:
+gcloud builds submit --tag gcr.io/adk-hackathon-2025-b4bfc/plotbuddy-api 
+

@@ -6,6 +6,7 @@ import RandomStory from "./components/RandomStory";
 import ProfilePage from "./components/ProfilePage"; 
 import NavBar from "./components/NavBar";
 import ErrorBoundary from "./ErrorBoundary";
+import { fetchAPI } from './utils/api';
 import "./App.css";
 
 // This component needs to be inside Router to use navigation hooks
@@ -53,15 +54,15 @@ const AppContent = () => {
 
   const handleSendMessage = async (message) => {
     setIsLoading(true);
-    
+
     setMessages(prev => [...prev, {
       id: Date.now(),
       text: message,
       sender: 'user'
     }]);
-    
+
     try {
-      const response = await fetch("/api/chat", {
+      const data = await fetchAPI('/api/chat', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -69,22 +70,20 @@ const AppContent = () => {
           user_id: "anonymous_user",
         }),
       });
-      
-      const data = await response.json();
       setIsLoading(false);
       handleAgentResponse(data);
-      
+
       return data.output;
     } catch (error) {
       console.error("Error sending message:", error);
       setIsLoading(false);
-      
+
       setMessages(prev => [...prev, {
         id: Date.now(),
         text: "Sorry, there was an error processing your request.",
         sender: 'bot'
       }]);
-      
+
       return "Sorry, there was an error processing your request.";
     }
   };

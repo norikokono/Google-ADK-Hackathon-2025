@@ -1,9 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
+import React, { useState } from 'react';
 import StoryGuide from './StoryGuide';
 import './RandomStory.css';
-
-const API_URL = 'http://localhost:8000'; // URL where your FastAPI server is running locally
+import { fetchAPI } from '../utils/api';
 
 const RandomStory = () => {
   const [generatedStoryText, setGeneratedStoryText] = useState('');
@@ -57,19 +55,13 @@ const RandomStory = () => {
   const createRipple = (event) => {
     const button = event.currentTarget;
     const ripple = button.getElementsByClassName("ripple")[0];
-    
-    if (ripple) {
-      ripple.remove();
-    }
-    
+    if (ripple) ripple.remove();
     const circle = document.createElement("span");
     const diameter = Math.max(button.clientWidth, button.clientHeight);
-    
     circle.style.width = circle.style.height = `${diameter}px`;
     circle.style.left = `${event.clientX - button.getBoundingClientRect().left - diameter / 2}px`;
     circle.style.top = `${event.clientY - button.getBoundingClientRect().top - diameter / 2}px`;
     circle.classList.add("ripple");
-    
     button.appendChild(circle);
   };
 
@@ -78,47 +70,35 @@ const RandomStory = () => {
     if (e) createRipple(e);
     setIsLoading(true);
     setError(null);
-    
+
     try {
       console.log("🎲 Generating random story...");
-      
+
       // Add timeout in case server takes too long
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error("Request timeout after 15 seconds")), 15000)
       );
-      
-      const fetchPromise = fetch(`${API_URL}/api/story/create`, {
+
+      const fetchPromise = fetchAPI('/api/story/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id: 'anonymous_user',
-          // Add more details to help debug the backend issue
           random: true,
           client_version: '1.0.1',
           timestamp: new Date().toISOString()
         })
       });
-      
+
       // Race between fetch and timeout
-      const response = await Promise.race([fetchPromise, timeoutPromise]);
-      
-      if (!response.ok) {
-        // Better error handling for specific status codes
-        if (response.status === 500) {
-          throw new Error("Server error: The story generator is experiencing technical difficulties");
-        } else {
-          throw new Error(`Server returned ${response.status}: ${response.statusText}`);
-        }
-      }
-      
-      const data = await response.json();
+      const data = await Promise.race([fetchPromise, timeoutPromise]);
+      // data is already parsed JSON
+
       console.log("📄 Random story generated:", data);
-      
+
       if (data.success) {
-        // Set the generated story text
         setGeneratedStoryText(data.story || data.message);
-        
-        // Safely update parameters with null checks
+
         if (data.parameters) {
           setStoryConfig({
             genre: data.parameters.genre || '',
@@ -126,15 +106,13 @@ const RandomStory = () => {
             length: data.parameters.length || ''
           });
         } else {
-          // Fallback for missing parameters
           setStoryConfig({
             genre: 'mystery',
             mood: 'suspenseful',
             length: 'short'
           });
         }
-        
-        // Auto-scroll to the story section
+
         setTimeout(() => {
           const storySection = document.querySelector('.generated-story-section');
           if (storySection) {
@@ -146,10 +124,7 @@ const RandomStory = () => {
       }
     } catch (err) {
       console.error("Error generating random story:", err);
-      // More user-friendly error message
       setError(`Sorry, I couldn't create your story: ${err.message}. Please try again in a few moments.`);
-      
-      // Provide fallback story for better UX
       setGeneratedStoryText("Sorry, I couldn't generate your story right now. Our AI storyteller needs a short break. Please try again in a moment!");
     } finally {
       setIsLoading(false);

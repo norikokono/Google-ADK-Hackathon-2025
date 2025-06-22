@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import StoryGuide from './StoryGuide';
 import './StoryCreator.css';
+import { fetchAPI } from '../utils/api';
 
 
 const StoryCreator = ({ onCreateStory, onBackToChat }) => {
@@ -66,9 +67,9 @@ const StoryCreator = ({ onCreateStory, onBackToChat }) => {
   const createStory = async () => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
-      const response = await fetch('/api/story/create', {
+      const data = await fetchAPI('/api/story/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -78,12 +79,8 @@ const StoryCreator = ({ onCreateStory, onBackToChat }) => {
           length: storyConfig.length
         })
       });
-      
-      const data = await response.json();
-      console.log("Story API response:", data);
-      
+
       if (data.success) {
-        // Fix: Use data.story instead of data.message
         setGeneratedStoryText(data.story || data.output || data.message);
       } else {
         setError(data.message || 'Failed to generate story');
@@ -145,7 +142,7 @@ const StoryCreator = ({ onCreateStory, onBackToChat }) => {
 
   // Debug log when story text changes
   useEffect(() => {
-    if (generatedStoryText) {
+    if (generatedStoryText && !generatedStoryText.startsWith("Error")) {
       console.log("Story text set:", generatedStoryText.substring(0, 50) + "...");
     }
   }, [generatedStoryText]);
@@ -175,7 +172,7 @@ const StoryCreator = ({ onCreateStory, onBackToChat }) => {
   // Function to fetch profile agent message
   const fetchProfileAgentMessage = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/profile/advice', {
+      const data = await fetchAPI('/api/profile/advice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -185,7 +182,6 @@ const StoryCreator = ({ onCreateStory, onBackToChat }) => {
         })
       });
       
-      const data = await response.json();
       if (data.success) {
         setProfileAgentMessage(data.output);
       }
@@ -197,7 +193,7 @@ const StoryCreator = ({ onCreateStory, onBackToChat }) => {
   // Function to request story brainstorming ideas
   const requestBrainstorming = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/profile/brainstorm', {
+      const data = await fetchAPI('/api/profile/brainstorm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -207,7 +203,6 @@ const StoryCreator = ({ onCreateStory, onBackToChat }) => {
         })
       });
       
-      const data = await response.json();
       if (data.success) {
         setProfileAgentMessage(data.output);
       }
@@ -589,7 +584,7 @@ const StoryCreator = ({ onCreateStory, onBackToChat }) => {
 };
 
 const FloatingLogo = () => {
-  return <img src="../../public/assets/images/plotbuddy-logo.svg" alt="PlotBuddy" className="floating-logo" />;
+  return <img src="../assets/images/plotbuddy-logo.svg" alt="PlotBuddy" className="floating-logo" />;
 };
 
 StoryCreator.propTypes = {
