@@ -77,3 +77,42 @@ gcloud run deploy plotbuddy-api \
 firebase deploy --only hosting
 
 
+
+
+
+Testing Instructions
+
+1. Clone the repository to your local machine and navigate to the project directory.
+
+2. Set up your environment variables:
+   - Copy the example `.env` file (if available) and fill in any required API keys or configuration values.
+
+3. Install backend dependencies:
+   pip install -r requirements.txt
+
+4. Install frontend dependencies:
+   cd my-chat-app
+   npm install
+
+5. Start the backend server:
+   uvicorn multi_tool_agent.api.server:app --reload
+
+6. Start the frontend development server:
+   npm start
+   (Make sure you are inside the frontend directory, e.g., `my-chat-app`.)
+
+7. Open your browser and go to http://localhost:3000 (or the port shown in your terminal) to access the application.
+
+8. Test the main features:
+   - Start a new story by selecting a genre, mood, and length.
+   - Interact with the chatbot by asking for genre suggestions, brainstorming help, writing tips, or pricing information.
+   - Try entering unsupported genres to see how the app handles fallback responses.
+   - Test the app on both desktop and mobile devices.
+
+9. Check the browser’s developer tools (Network tab) to verify API responses and ensure errors are handled gracefully.
+
+10. If automated tests are available, run:
+    pytest         # for backend tests
+    npm test       # for frontend tests
+
+11. If you encounter any issues, review the terminal logs and consult the README for troubleshooting

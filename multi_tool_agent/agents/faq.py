@@ -6,6 +6,7 @@ import json
 
 from ..models.schemas import ToolRequest, ToolResponse
 from google.adk.agents import LlmAgent
+
 from . import client
 from multi_tool_agent.config.response import FAQ_RESPONSES, STORY_TEMPLATES, ERROR_MESSAGES
 
@@ -34,8 +35,8 @@ class FAQAgent(LlmAgent):
         super().__init__(
             model=model_name,
             name="faq_agent",
-            description="Answers common questions and provides guidance on using PlotBuddy.",
-            instruction="You are a helpful FAQ assistant. Your task is to provide predefined answers to common questions or leverage AI to respond."
+            description="Answers frequently asked questions about PlotBuddy.",
+            instruction="You are a helpful FAQ assistant for PlotBuddy."
         )
         # Define more comprehensive patterns with broader keyword matches
         self._faq_patterns = {
@@ -105,7 +106,9 @@ class FAQAgent(LlmAgent):
         self._genre_keywords = [
             "fiction", "fantasy", "sci-fi", "science fiction", "mystery", "thriller",
             "horror", "romance", "adventure", "historical", "western", 
-            "comedy", "drama", "novel", "story about", "cyberpunk"
+            "comedy", "drama", "novel", "story about", "cyberpunk", "action", "fairy tale",
+            "myth", "legend", "crime", "detective", "dystopian", "utopian", "paranormal",
+            "western"
         ]
 
         logger.info("FAQAgent initialized.")
@@ -403,10 +406,22 @@ FAQ_RESPONSES = {
    ),
 }
 
-# Assume ERROR_MESSAGES is also defined in multi_tool_agent.config.response
-ERROR_MESSAGES = {
-    "INVALID_INPUT_TYPE": "Please provide your query as text. Type 'help' for options."
+GENRE_DESCRIPTIONS = {
+    "mystery": "Detective stories and puzzles",
+    "scifi": "Future and technology",
+    "fantasy": "Magic and wonder",
+    "romance": "Love and relationships",
+    "adventure": "Action and excitement",
+    "horror": "Suspense and fear",
+    "comedy": "Humor and fun",
+    "thriller": "Intense suspense and plot twists",
+    "historical": "Past events and periods",
+    "western": "Frontier and cowboys",
+    "cyberpunk": "Dystopian tech future"
 }
+GENRES_MESSAGE = "Only these genres are available:\n" + "\n".join(
+    f"• {genre} – {desc}" for genre, desc in GENRE_DESCRIPTIONS.items()
+)
 
 # For testing (ensure these match your actual schema definitions or mock them appropriately)
 if __name__ == "__main__":

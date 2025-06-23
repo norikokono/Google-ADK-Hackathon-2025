@@ -37,7 +37,8 @@ from multi_tool_agent.config.response import GREETING_RESPONSES, FAQ_RESPONSES, 
 GENRE_KEYWORDS = [
     "fantasy", "mystery", "sci-fi", "science fiction", "romance", "adventure",
     "thriller", "horror", "historical", "comedy", "drama", "action", "fairy tale",
-    "myth", "legend", "crime", "detective", "dystopian", "utopian", "paranormal"
+    "myth", "legend", "crime", "detective", "dystopian", "utopian", "paranormal",
+    "western", "cyberpunk"  # Add more supported genres here
 ]
 MOOD_KEYWORDS = [
     "happy", "exciting", "dark", "funny", "sad", "romantic", "mysterious", "adventurous", "scary", "uplifting"
@@ -138,14 +139,17 @@ class OrchestratorAgent:
                 message="REDIRECT_TO_STORY_CREATOR"
             )
 
-        # 2. Genre intent: user just types a genre
-        for genre in GENRE_KEYWORDS:
+        # 2. Supported genre: respond and redirect
+        for genre in [
+            "mystery", "scifi", "fantasy", "romance", "adventure", "horror",
+            "comedy", "thriller", "historical", "western", "cyberpunk"
+        ]:
             if genre in message_lower:
                 return ToolResponse(
                     success=True,
                     output=(
                         f"Fantastic choice! 🌟 '{genre.title()}' stories are full of adventure and imagination. "
-                        "Let's get started—I'm sending you to the story creator!"
+                        f"Let's get started—I'm sending you to the story creator!"
                     ),
                     message="REDIRECT_TO_STORY_CREATOR"
                 )
@@ -194,18 +198,34 @@ class OrchestratorAgent:
             message_lower = request.input.lower().strip()
 
             # Engaging fallbacks for common topics
+            from multi_tool_agent.config.response import FAQ_RESPONSES
             if "genre" in message_lower or "genres" in message_lower:
-                return ToolResponse(
-                    success=True,
-                    output="PlotBuddy offers a wide range of genres! 📚✨ Try fantasy, mystery, sci-fi, romance, adventure, and more. Which genre would you like to explore?",
-                    message="GENRES_MESSAGE"
-                )
+                # Use LLM for a more engaging, personalized response
+                if hasattr(self, "run"):
+                    prompt = (
+                        "The user is interested in story genres. "
+                        "Respond enthusiastically, suggest a few fun genres, and ask which one they'd like to try. "
+                        "Encourage them to pick a genre to start their story."
+                    )
+                    llm_response = self.run(prompt=prompt + f"\nUser: {request.input}\nAssistant:")
+                    output = getattr(llm_response, "output", None) or getattr(llm_response, "text", None)
+                    if output:
+                        return ToolResponse(success=True, output=output, message="GENRES_MESSAGE")
+                # Fallback to static
+                return ToolResponse(success=True, output=FAQ_RESPONSES["GENRES_MESSAGE"], message="")
+
             if "brainstorm" in message_lower or "idea" in message_lower:
-                return ToolResponse(
-                    success=True,
-                    output="Let's brainstorm together! 💡 Tell me a theme, genre, or idea, and I'll help you get started.",
-                    message="BRAINSTORM_MESSAGE"
-                )
+                if hasattr(self, "run"):
+                    prompt = (
+                        "The user wants to brainstorm story ideas. "
+                        "Ask an engaging follow-up question, suggest creative directions, and keep the conversation going. "
+                        "Be friendly and encouraging."
+                    )
+                    llm_response = self.run(prompt=prompt + f"\nUser: {request.input}\nAssistant:")
+                    output = getattr(llm_response, "output", None) or getattr(llm_response, "text", None)
+                    if output:
+                        return ToolResponse(success=True, output=output, message="BRAINSTORM_MESSAGE")
+                return ToolResponse(success=True, output="Let's brainstorm together! Tell me a theme, genre, or idea, and I'll help you get started.", message="BRAINSTORM_MESSAGE")
             if "price" in message_lower or "pricing" in message_lower or "cost" in message_lower or "subscription" in message_lower:
                 return ToolResponse(
                     success=True,

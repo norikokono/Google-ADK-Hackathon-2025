@@ -129,9 +129,25 @@ async def chat(request: Request):
 
         tool_request = ToolRequest(user_id=user_id, input=user_input, context=context)
         response = orchestrator.process(tool_request)
+
+        # Defensive: ensure response is a ToolResponse and all fields are serializable
         success = getattr(response, "success", False)
         output = getattr(response, "output", "")
-        message = getattr(response, "message", "No message returned from orchestrator.")
+        message = getattr(response, "message", "")
+
+        # Ensure output and message are strings (not objects or None)
+        if output is None:
+            output = ""
+        if not isinstance(output, str):
+            output = str(output)
+        if message is None:
+            message = ""
+        if not isinstance(message, str):
+            message = str(message)
+
+        logger.debug(
+            f"API chat response for {user_id}: success={success}, output={output}, message={message}"
+        )
         return JSONResponse(
             content={
                 "success": success,
