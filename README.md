@@ -115,7 +115,7 @@ The architecture follows a hub-and-spoke model where the **Orchestrator Agent** 
 1.  **Clone the repository**
     ```bash
     git clone https://github.com/norikokono/Google-ADK-Hackathon-2025.git
-    cd multi_tool_agent
+    cd Google-ADK-Hackathon-2025
     ```
 
 2.  **Install dependencies**
