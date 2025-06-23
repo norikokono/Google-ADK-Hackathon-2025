@@ -68,6 +68,7 @@ const AppContent = () => {
         body: JSON.stringify({
           input: message,
           user_id: "anonymous_user",
+          hour: new Date().getHours(), // <-- add this if needed
         }),
       });
       setIsLoading(false);

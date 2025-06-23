@@ -478,7 +478,14 @@ Update your profile with commands like:
         """Return the user's profile dict, creating it if it doesn't exist."""
         if user_id not in self.user_profiles:
             self.user_profiles[user_id] = self._create_initial_profile()
-        return self.user_profiles[user_id]
+        profile = self.user_profiles[user_id].copy()
+        # Convert datetime fields to isoformat strings
+        for key in ["created_at", "last_updated"]:
+            if isinstance(profile.get(key), datetime):
+                profile[key] = profile[key].isoformat()
+        if "stats" in profile and isinstance(profile["stats"].get("last_activity"), datetime):
+            profile["stats"]["last_activity"] = profile["stats"]["last_activity"].isoformat()
+        return profile
 
 
 # For testing this agent in isolation

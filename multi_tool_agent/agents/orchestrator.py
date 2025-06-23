@@ -34,6 +34,24 @@ except ImportError:
 
 from multi_tool_agent.config.response import GREETING_RESPONSES, FAQ_RESPONSES, STORY_TEMPLATES, ERROR_MESSAGES
 
+GENRE_KEYWORDS = [
+    "fantasy", "mystery", "sci-fi", "science fiction", "romance", "adventure",
+    "thriller", "horror", "historical", "comedy", "drama", "action", "fairy tale",
+    "myth", "legend", "crime", "detective", "dystopian", "utopian", "paranormal"
+]
+MOOD_KEYWORDS = [
+    "happy", "exciting", "dark", "funny", "sad", "romantic", "mysterious", "adventurous", "scary", "uplifting"
+]
+LENGTH_KEYWORDS = [
+    "short", "medium", "long"
+]
+
+def extract_param(keywords, message):
+    for word in keywords:
+        if word in message:
+            return word
+    return None
+
 class OrchestratorAgent:
     """
     Manages the initialization and routing of messages to different PlotBuddy agents.
@@ -42,10 +60,16 @@ class OrchestratorAgent:
         self.model_name = model_name
         logger.info(f"OrchestratorAgent initialized with model: {model_name}")
 
-        self.greeting_agent = GreetingAgent(model_name="gemini-1.5-flash")
+        self.greeting_agent = GreetingAgent(model="gemini-1.5-flash")
         self.faq_agent = FAQAgent(model_name="gemini-1.5-flash")
         self.profile_agent = ProfileAgent(model_name="gemini-1.5-flash")
         self.story_agent = StoryAgent(model_name="gemini-2.0-flash")
+        self.llm_agent = LlmAgent(
+            name="llm_agent",
+            model="gemini-1.5-flash",
+            description="Handles open-ended user queries.",
+            instruction="You are a helpful AI assistant."
+        )
 
         self.default_agent = self.greeting_agent
 
@@ -72,7 +96,18 @@ class OrchestratorAgent:
             logger.info("✓ Greeting match → GreetingAgent")
             return self.greeting_agent
 
-        story_keywords = ["create story", "write story", "generate story", "new story", "story"]
+        story_keywords = ["create story", "write story", "generate story", "new story", "story", "plot", 
+                          "character", "world building", "narrative", "novel", "book", "tale", "story idea",
+                          "story creation", "make story", "develop story", "build story", "storytelling",
+                          "story prompt", "story concept", "story outline", "story draft", "story structure",
+                          "story arc", "story theme", "story genre", "story setting", "story character",
+                          "story conflict", "story resolution", "story climax", "story beginning", 
+                          "story middle", "story end", "story plot twist", "story character development",
+                          "story dialogue", "story scene", "story chapter", "story summary", "story analysis",
+                          "story feedback", "story review", "story brainstorming", "story inspiration",
+                          "story writing", "story editing", "story publishing", "story sharing", "story collaboration",
+                          "story workshop", "story community", "story writing tips", "story writing advice",
+                          "story writing techniques", "story writing prompts", "story writing exercises"]
         if any(keyword in message_lower for keyword in story_keywords):
             logger.info("✓ Story creation match → StoryAgent")
             return self.story_agent
@@ -82,39 +117,113 @@ class OrchestratorAgent:
 
     # --- FIX: RENAMED back to 'process' from 'process_message' ---
     # The signature (user_id, request, context) remains the same.
-    def process(self, user_id: str, request: ToolRequest, context: Dict[str, Any] = None) -> ToolResponse:
+    def process(self, request: ToolRequest, context: dict = None) -> ToolResponse:
         """
         Process an incoming message and route it to the appropriate agent.
         """
-        logger.info(f"Orchestrator received and processing for user {user_id}: '{request.input}'")
+        logger.info(f"Orchestrator received and processing: '{request.input}'")
         if context is None:
             context = {}
 
-        message_lower = request.input.lower()
-        story_creation_initial_keywords = ["create story", "write story", "make story", "story creation", "new story"]
+        message_lower = request.input.lower().strip()
 
-        if any(keyword in message_lower for keyword in story_creation_initial_keywords) or message_lower.strip() == "story":
-            logger.info(f"Initial story creation intent detected: '{request.input}'. Signaling frontend for redirect.")
+        # 1. Story creation intent (redirect)
+        story_creation_initial_keywords = [
+            "create story", "write story", "make story", "story creation", "new story", "generate story"
+        ]
+        if any(keyword in message_lower for keyword in story_creation_initial_keywords) or message_lower == "story":
             return ToolResponse(
                 success=True,
-                output="I'd love to help you create a story! Please tell me the genre, mood, and length.",
+                output=None,
                 message="REDIRECT_TO_STORY_CREATOR"
             )
 
+        # 2. Genre intent: user just types a genre
+        for genre in GENRE_KEYWORDS:
+            if genre in message_lower:
+                return ToolResponse(
+                    success=True,
+                    output=(
+                        f"Fantastic choice! 🌟 '{genre.title()}' stories are full of adventure and imagination. "
+                        "Let's get started—I'm sending you to the story creator!"
+                    ),
+                    message="REDIRECT_TO_STORY_CREATOR"
+                )
+
         try:
+            # FAQAgent first
+            faq_response = self.faq_agent.process(request, context)
+            if faq_response.success:
+                return faq_response
+
+            # GreetingAgent for greetings and small talk
+            greeting_response = self.greeting_agent.process(request, context)
+            if greeting_response.success:
+                return greeting_response
+
             agent_to_use = self._route_message(request)
             logger.info(f"Routing to agent: {agent_to_use.__class__.__name__}")
 
-            # All your specific agents (StoryAgent, GreetingAgent, etc.) are expected to have a 'process' method
             output = agent_to_use.process(request, context)
-            
-            return output
-        except Exception as e:
-            logger.error(f"Error processing message in Orchestrator's process: {e}", exc_info=True)
+
+            # If the agent handled the request, return its response
+            if output and output.success:
+                return output
+
+            # If FAQAgent didn't handle, try fallback to FAQAgent (if not already tried)
+            if agent_to_use is not self.faq_agent:
+                faq_output = self.faq_agent.process(request, context)
+                if faq_output and faq_output.success:
+                    return faq_output
+
+            # LLM fallback for open-ended queries
+            if hasattr(self, "llm_agent") and self.llm_agent:
+                llm_response = self.llm_agent.process(request, context)
+                if llm_response and getattr(llm_response, "output", None):
+                    return llm_response
+
+            # Final fallback
             return ToolResponse(
                 success=False,
-                output="I'm sorry, I encountered an internal error while trying to process your request. Please try again.",
-                message=f"Orchestrator Error: {str(e)}"
+                output=None,
+                message="I'm here to help! Could you please rephrase your question or let me know what kind of story you'd like to create?"
+            )
+
+        except Exception as e:
+            logger.error(f"Error processing message in Orchestrator's process: {e}", exc_info=True)
+            message_lower = request.input.lower().strip()
+
+            # Engaging fallbacks for common topics
+            if "genre" in message_lower or "genres" in message_lower:
+                return ToolResponse(
+                    success=True,
+                    output="PlotBuddy offers a wide range of genres! 📚✨ Try fantasy, mystery, sci-fi, romance, adventure, and more. Which genre would you like to explore?",
+                    message="GENRES_MESSAGE"
+                )
+            if "brainstorm" in message_lower or "idea" in message_lower:
+                return ToolResponse(
+                    success=True,
+                    output="Let's brainstorm together! 💡 Tell me a theme, genre, or idea, and I'll help you get started.",
+                    message="BRAINSTORM_MESSAGE"
+                )
+            if "price" in message_lower or "pricing" in message_lower or "cost" in message_lower or "subscription" in message_lower:
+                return ToolResponse(
+                    success=True,
+                    output="PlotBuddy offers a free trial and affordable subscription options. Visit the pricing page or ask me for details about our plans!",
+                    message="PRICING_MESSAGE"
+                )
+            if "help" in message_lower:
+                return ToolResponse(
+                    success=True,
+                    output="I'm here to help! You can ask me to create a story, brainstorm ideas, or learn about genres and features. What would you like to do?",
+                    message="HELP_MESSAGE"
+                )
+
+            # Friendly generic fallback
+            return ToolResponse(
+                success=False,
+                output=None,
+                message="I'm here to help! Could you please rephrase your question or let me know what kind of story you'd like to create?"
             )
 
     def _detect_story_creation_intent(self, message: str, history: Dict[str, Any]) -> bool:
@@ -174,14 +283,44 @@ class OrchestratorAgent:
             return "faq"
 
     def use_llm_agent(self, request: ToolRequest, context: Dict[str, Any] = None) -> ToolResponse:
-        """Use the LLM agent directly"""
+        """Use the LLM agent directly for open-ended queries or when no other agent is suitable."""
         if context is None:
             context = {}
         if hasattr(self, 'llm_agent') and self.llm_agent:
-             return self.llm_agent.process(request, context)
-        else:
-            logger.warning("use_llm_agent called but self.llm_agent is not defined in OrchestratorAgent.")
-            return ToolResponse(success=False, output="LLM agent not available for direct use by Orchestrator.", message="LLM_NOT_CONFIGURED")
+            llm_response = self.llm_agent.process(request, context)
+            return llm_response
+
+        # If LLM agent fails, then:
+        return ToolResponse(
+            success=False,
+            output=None,
+            message="I'm here to help! Could you please rephrase your question or let me know what kind of story you'd like to create?"
+        )
+
+    def brainstorm_with_llm(self, request: ToolRequest, context: Dict[str, Any] = None) -> ToolResponse:
+        """Use the LLM agent for brainstorming to keep the conversation going."""
+        if context is None:
+            context = {}
+        if hasattr(self, "llm_agent") and self.llm_agent:
+            prompt = (
+                "You are PlotBuddy, a creative writing assistant. "
+                "The user wants to brainstorm story ideas. "
+                "Ask engaging follow-up questions, suggest creative directions, and keep the conversation going. "
+                "Be friendly and encouraging."
+            )
+            # Optionally, include the user's input in the prompt
+            user_input = request.input
+            full_prompt = f"{prompt}\nUser: {user_input}\nAssistant:"
+            llm_response = self.llm_agent.run(prompt=full_prompt)
+            output = getattr(llm_response, "output", None) or getattr(llm_response, "text", None)
+            if output:
+                return ToolResponse(success=True, output=output, message="BRAINSTORM_CONVERSATION")
+
+        return ToolResponse(
+            success=False,
+            output=None,
+            message="I'm here to help! Could you please rephrase your question or let me know what kind of story you'd like to create?"
+        )
 
 
 orchestrator = OrchestratorAgent()

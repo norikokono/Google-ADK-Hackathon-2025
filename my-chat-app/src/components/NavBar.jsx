@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import './NavBar.css';
-
-// const API_URL = 'http://localhost:8000'; // URL where your FastAPI server is running locally
 
 const NavBar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -33,15 +32,22 @@ const NavBar = () => {
   const toggleMenu = () => setIsMenuOpen((prev) => !prev);
   const closeMenu = () => setIsMenuOpen(false);
 
+  // Ensure logo and logo-name always navigate to home, even on mobile
+  const handleLogoClick = (e) => {
+    e.preventDefault();
+    closeMenu();
+    navigate('/');
+  };
+
   return (
     <nav className="navbar">
       {/* Logo with fixed path */}
-      <Link to="/" className="nav-logo" onClick={closeMenu}>
+      <a href="/" className="nav-logo" onClick={handleLogoClick}>
         <img src="/assets/images/plotbuddy-navbar-logo.svg" alt="PlotBuddy" />
-      </Link>
-      <Link to="/" className="nav-logo-name" onClick={closeMenu}>
+      </a>
+      <a href="/" className="nav-logo-name" onClick={handleLogoClick}>
         <img src="/assets/images/plotbuddy-text-logo.svg" alt="PlotBuddy" />
-      </Link>
+      </a>
       <button 
         className="nav-menu-button" 
         onClick={toggleMenu}

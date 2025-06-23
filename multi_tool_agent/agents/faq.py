@@ -65,7 +65,11 @@ class FAQAgent(LlmAgent):
             },
             "how_it_works": {
                 "keywords": ["how it works", "how does it work", "process", "explain", "details", 
-                            "steps", "guide me", "tutorial", "instructions", "workflow"],
+                            "steps", "guide me", "tutorial", "instructions", "workflow", "how it works", 
+                            "how does plotbuddy work", "features", "about plotbuddy", "what can you do",
+                            "what is plotbuddy", "what is plot buddy", "how to use plotbuddy",
+                            "how to use plot buddy", "plotbuddy features", "plot buddy features",
+                            "plotbuddy overview", "plot buddy overview", "plotbuddy guide", "plot buddy guide"],
                 "response_key": "HOW_IT_WORKS_MESSAGE"
             },
             "using_plotbuddy": {
@@ -106,22 +110,34 @@ class FAQAgent(LlmAgent):
 
         logger.info("FAQAgent initialized.")
 
-    def process(self, request: ToolRequest, context: Dict[str, Any] = None) -> ToolResponse:
-        if context is None:
-            context = {}
-
-        user_id = request.user_id
-        message = request.input
-
-        logger.info(f"⏺️ FAQ AGENT RECEIVED: '{request.input}'")
-
-        if not isinstance(request.input, str):
-            logger.warning(f"FAQAgent received non-string input: {type(request.input)}. Returning fallback message.")
-            return ToolResponse.error(ERROR_MESSAGES["INVALID_INPUT_TYPE"])
-
+    def process(self, request: ToolRequest, context: dict = None) -> ToolResponse:
         message_lower = request.input.lower().strip()
 
-        # Genre keyword check
+        # 1. Handle 'help'
+        if message_lower in ["help", "/help"]:
+            return ToolResponse(success=True, output=FAQ_RESPONSES["HELP_MESSAGE"], message="")
+
+        # 2. Handle 'what genres', 'genre', etc.
+        if "genre" in message_lower or "genres" in message_lower:
+            return ToolResponse(success=True, output=FAQ_RESPONSES["GENRES_MESSAGE"], message="")
+
+        # 3. Handle 'price', 'pricing', 'cost', etc.
+        if any(word in message_lower for word in ["price", "pricing", "cost", "subscription"]):
+            return ToolResponse(success=True, output=FAQ_RESPONSES["PRICING_MESSAGE"], message="")
+
+        # 4. Handle 'how it works', 'features', etc.
+        if any(word in message_lower for word in [
+            "how it works", "how does plotbuddy work", "features", "about plotbuddy", "what can you do", "what is plotbuddy"
+        ]):
+            return ToolResponse(success=True, output=FAQ_RESPONSES["HOW_IT_WORKS_MESSAGE"], message="")
+
+        # 5. Pattern matching for other FAQs
+        for category, pattern in self._faq_patterns.items():
+            if any(kw in message_lower for kw in pattern["keywords"]):
+                logger.info(f"FAQ pattern matched: {category} for '{message_lower}'")
+                return ToolResponse(success=True, output=FAQ_RESPONSES.get(pattern["response_key"], "Sorry, I don't have an answer for that."), message="")
+
+        # 6. Genre keyword check (for story creation intent)
         if any(genre.lower() in message_lower for genre in self._genre_keywords):
             detected_genre = next((genre for genre in self._genre_keywords if genre.lower() in message_lower), "that")
             logger.info(f"Genre keyword detected: '{message_lower}'")
@@ -130,18 +146,7 @@ class FAQAgent(LlmAgent):
                 message="REDIRECT_TO_STORY_CREATOR_FORCE"
             )
 
-        # FAQ pattern check
-        for category, pattern in self._faq_patterns.items():
-            keywords_found = [kw for kw in pattern["keywords"] if kw in message_lower]
-            if keywords_found:
-                logger.info(f"✅ FAQ pattern matched: {category} for '{message_lower}', keywords: {keywords_found}")
-                return ToolResponse.success(
-                    FAQ_RESPONSES[pattern["response_key"]]
-                )
-
-        logger.info(f"❌ No FAQ pattern matched for: '{message_lower}'")
-
-        # Story intent check
+        # 7. Story intent check
         if any(keyword in message_lower for keyword in self._story_intent_keywords):
             logger.info(f"Story intent keyword detected: '{message_lower}'")
             context = request.context or {}
@@ -160,7 +165,7 @@ class FAQAgent(LlmAgent):
                     message="REDIRECT_TO_STORY_CREATOR"
                 )
 
-        # --- Generative AI Fallback for Unmatched Queries ---
+        # 8. Generative AI Fallback for Unmatched Queries
         try:
             if hasattr(client, "GOOGLE_API_KEY") and client.GOOGLE_API_KEY:
                 prompt = self._construct_ai_prompt(request.input)
@@ -177,7 +182,7 @@ class FAQAgent(LlmAgent):
             logger.exception(f"Error generating AI FAQ response for '{request.input}': {e}")
             return ToolResponse.error("Sorry, our AI service is temporarily unavailable. Please try again later.")
 
-        # --- Final Fallback ---
+        # 9. Final Fallback
         logger.info(f"FAQAgent could not match or generate AI response for query '{request.input}'. Returning fallback message.")
         return ToolResponse.success(FAQ_RESPONSES["DEFAULT_FALLBACK"])
 

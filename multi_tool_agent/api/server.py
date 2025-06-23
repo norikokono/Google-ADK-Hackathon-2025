@@ -13,26 +13,18 @@ load_dotenv(dotenv_path=os.path.join(os.path.dirname(os.path.dirname(__file__)),
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-# Remove direct Gemini API usage (handled by ADK agents)
-# The `import google.generativeai as genai` line can likely be removed if no direct genai calls are made here,
-# as ADK agents handle it internally. For now, leaving it as it causes no harm.
-# The genai.configure() call from the previous version has been removed as you indicated
-# "Remove direct Gemini API usage (handled by ADK agents)".
-# The API key warning block remains good practice.
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 print("GOOGLE_API_KEY:", GOOGLE_API_KEY)
 if not GOOGLE_API_KEY:
     logger.critical("GOOGLE_API_KEY environment variable not found. LLM calls will fail. "
                     "Ensure GOOGLE_API_KEY is set in your environment variables or .env file.")
 
+# Use absolute imports if possible
+from multi_tool_agent.agents.story import StoryAgent
+from multi_tool_agent.models.schemas import ToolRequest
+from multi_tool_agent.agents.profile import ProfileAgent
+from multi_tool_agent.agents.orchestrator import OrchestratorAgent
 
-# Import your agents and schemas
-from ..agents.story import StoryAgent
-from ..models.schemas import ToolRequest
-from ..agents.profile import ProfileAgent
-from ..agents.orchestrator import OrchestratorAgent
-
-# Instantiate the orchestrator (singleton or otherwise)
 orchestrator = OrchestratorAgent()
 
 app = FastAPI()
@@ -54,11 +46,9 @@ app.add_middleware(
 # --- End CORS Configuration ---
 
 def get_story_agent():
-    """Dependency injector for StoryAgent."""
     return StoryAgent()
 
 def get_profile_agent():
-    """Dependency injector for ProfileAgent."""
     return ProfileAgent(model_name="gemini-1.5-flash")
 
 class StoryRequest(BaseModel):
@@ -126,30 +116,22 @@ async def create_story(request: Request, story_agent: StoryAgent = Depends(get_s
 async def chat(request: Request):
     try:
         data = await request.json()
-        user_id = data.get('user_id', 'anonymous_user')
         user_input = data.get('input', '')
+        user_id = data.get('user_id', 'anonymous_user')
+        hour = data.get('hour')
+        time_zone = data.get('time_zone')
 
-        logger.debug(f"Chat request from {user_id}: '{user_input}'")
+        context = {}
+        if hour is not None:
+            context["hour"] = hour
+        if time_zone is not None:
+            context["time_zone"] = time_zone
 
-        if not user_input:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "success": False,
-                    "output": "I didn't receive any input. What would you like to talk about?",
-                    "message": "No input provided."
-                }
-            )
-
-        tool_request = ToolRequest(user_id=user_id, input=user_input)
-        # FIX APPLIED HERE: Pass user_id as the first argument
-        response = orchestrator.process(user_id, tool_request) 
+        tool_request = ToolRequest(user_id=user_id, input=user_input, context=context)
+        response = orchestrator.process(tool_request)
         success = getattr(response, "success", False)
         output = getattr(response, "output", "")
         message = getattr(response, "message", "No message returned from orchestrator.")
-        logger.debug(
-            f"FULL RESPONSE from orchestrator for {user_id}: success={success}, output={output}, message={message}"
-        )
         return JSONResponse(
             content={
                 "success": success,
@@ -190,7 +172,7 @@ async def get_profile(request: Request, profile_agent: ProfileAgent = Depends(ge
 
 @app.post("/api/debug")
 async def debug_greeting():
-    from ..agents.greeting import GreetingAgent
+    from multi_tool_agent.agents.greeting import GreetingAgent
     agent = GreetingAgent()
     request = ToolRequest(user_id="test_user", input="hi")
     response = agent.process(request)
@@ -238,8 +220,8 @@ async def profile_advice(request: Request, profile_agent: ProfileAgent = Depends
 
 def main():
     import uvicorn
-    # Removed reload=True for production builds as it's not typically needed in Cloud Run
-    uvicorn.run("multi_tool_agent.api.server:app", host="0.0.0.0", port=8080)
+    port = int(os.environ.get("PORT", 8080))
+    uvicorn.run("multi_tool_agent.api.server:app", host="0.0.0.0", port=port)
 
 if __name__ == "__main__":
     main()

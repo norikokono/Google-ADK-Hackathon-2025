@@ -26,82 +26,14 @@ your_project_root/
 └── requirements.txt
 
 
-python -m multi_tool_agent.api.server
-
-python test_story.py
-
-lsof -ti:8000 | xargs kill
-
-multi_tool_agent/
-This is your backend (Python, ADK, agents, orchestrator, etc.).
-
-my-chat-app/
-This is your frontend (React app, where you put ChatApp.jsx).
-
-How to connect them:
-
-Run your backend (multi_tool_agent) so it exposes an API endpoint (e.g., /api/chat).
-Run your frontend (my-chat-app) with npm start or yarn start.
-In your React code, make sure the fetch URL matches your backend endpoint.
-If running locally on different ports, use the full URL, e.g.:
-
-
-your_project_root/
-├── multi_tool_agent/
-│   ├── __init__.py          <-- IMPORTANT: This file must exist!
-│   ├── agents/
-│   │   ├── __init__.py      <-- IMPORTANT: This file must exist!
-│   │   └── story.py         <-- Your StoryAgent code is here
-│   └── models/
-│       ├── __init__.py      <-- IMPORTANT: This file must exist!
-│       └── schemas.py       <-- Your ToolRequest, ToolResponse are here
-├── .env                     <-- Your environment variables file
-├── some_main_app.py         <-- (Optional) Your main application entry point
-└── requirements.txt
-
-
-python -m multi_tool_agent.api.server
-
-python test_story.py
-
-lsof -ti:8000 | xargs kill
-
-
-multi_tool_agent/
-This is your backend (Python, ADK, agents, orchestrator, etc.).
-
-my-chat-app/
-This is your frontend (React app, where you put ChatApp.jsx).
-
-How to connect them:
-
-Run your backend (multi_tool_agent) so it exposes an API endpoint (e.g., /api/chat).
-Run your frontend (my-chat-app) with npm start or yarn start.
-In your React code, make sure the fetch URL matches your backend endpoint.
-If running locally on different ports, use the full URL, e.g.:
-
-
-your_project_root/
-├── multi_tool_agent/
-│   ├── __init__.py          <-- IMPORTANT: This file must exist!
-│   ├── agents/
-│   │   ├── __init__.py      <-- IMPORTANT: This file must exist!
-│   │   └── story.py         <-- Your StoryAgent code is here
-│   └── models/
-│       ├── __init__.py      <-- IMPORTANT: This file must exist!
-│       └── schemas.py       <-- Your ToolRequest, ToolResponse are here
-├── .env                     <-- Your environment variables file
-├── some_main_app.py         <-- (Optional) Your main application entry point
-└── requirements.txt
-
 
 python -m multi_tool_agent.api.server
 uvicorn multi_tool_agent.api.server:app --reload
 python test_story.py
 
+uvicorn multi_tool_agent.api.server:app --host 0.0.0.0 --port 8080
+
 lsof -ti:8080 | xargs kill
-
-
 
 
 Google-ADK-Hackathon/
@@ -127,11 +59,13 @@ Google-ADK-Hackathon/
 
 Hosting URL: https://adk-hackathon-2025-b4bfc.web.app
 
-# 1. my-chat-app
-npm run builds
+0. uvicorn multi_tool_agent.api.server:app --host 0.0.0.0 --port 8080
+
+1. my-chat-app
+npm run build
 firebase deploy
 
-# 2. root
+2. root
 gcloud builds submit --tag gcr.io/adk-hackathon-2025-b4bfc/plotbuddy-api
 gcloud run deploy plotbuddy-api \
   --image gcr.io/adk-hackathon-2025-b4bfc/plotbuddy-api \
@@ -139,11 +73,7 @@ gcloud run deploy plotbuddy-api \
   --region us-central1 \
   --allow-unauthenticated
 
-# 3. root
+3. root
 firebase deploy --only hosting
 
-
-
-# Deploy the NEWLY BUILT image:
-gcloud builds submit --tag gcr.io/adk-hackathon-2025-b4bfc/plotbuddy-api 
 

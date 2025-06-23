@@ -84,3 +84,5 @@ yarn-error.log*
 
 # Only ignore .github if it contains private or local-only files
 # .github
+
+memo.txt

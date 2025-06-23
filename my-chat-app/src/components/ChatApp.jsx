@@ -45,7 +45,8 @@ const ChatApp = () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               input: "hi",
-              user_id: "anonymous_user"
+              user_id: "anonymous_user",
+              time_zone: Intl.DateTimeFormat().resolvedOptions().timeZone // <-- added
             })
           });
 
@@ -69,13 +70,19 @@ const ChatApp = () => {
 
   // Handles sending messages
   const handleSendMessage = async (message) => {
+    const hour = new Date().getHours();
+    setIsLoading(true);
     try {
-      if (!message || message.trim() === '') {
-        console.log("Empty message, not sending");
-        return;
-      }
-
-      setIsLoading(true);
+      const response = await fetchAPI('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          input: message,
+          user_id: "anonymous_user",
+          hour: hour,
+          time_zone: Intl.DateTimeFormat().resolvedOptions().timeZone // <-- added
+        }),
+      });
 
       // Add user message immediately
       setMessages(prev => [...prev, {
@@ -84,21 +91,11 @@ const ChatApp = () => {
         text: message
       }]);
 
-      // Send request to backend
-      const data = await fetchAPI('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          input: message,
-          user_id: "anonymous_user"
-        })
-      });
-
-      console.log("API response:", data);
+      console.log("API response:", response);
 
       // Check for redirection flags with better logging
-      if (data.message === "REDIRECT_TO_STORY_CREATOR" ||
-        data.message === "REDIRECT_TO_STORY_CREATOR_FORCE") {
+      if (response.message === "REDIRECT_TO_STORY_CREATOR" ||
+        response.message === "REDIRECT_TO_STORY_CREATOR_FORCE") {
 
         console.log("🔄 REDIRECT flag detected in response");
 
@@ -106,17 +103,17 @@ const ChatApp = () => {
         setMessages(prev => [...prev, {
           id: Date.now() + 1,
           sender: 'bot',
-          text: data.output || "Great! Let's create your story."
+          text: response.output || "Great! Let's create your story."
         }]);
 
         // Force immediate redirect for FORCE flag, or small delay for regular flag
-        const delay = data.message === "REDIRECT_TO_STORY_CREATOR_FORCE" ? 500 : 1000;
+        const delay = response.message === "REDIRECT_TO_STORY_CREATOR_FORCE" ? 500 : 1000;
 
         console.log(`⏳ Scheduling redirect in ${delay}ms`);
 
         // Set a timeout for the redirect to allow user to read the message
         setTimeout(() => {
-          console.log(`⏰ Executing redirect now (${data.message})...`);
+          console.log(`⏰ Executing redirect now (${response.message})...`);
           setCurrentView('create');
         }, delay);
 
@@ -129,7 +126,7 @@ const ChatApp = () => {
       setMessages(prev => [...prev, {
         id: Date.now() + 1,
         sender: 'bot',
-        text: data.output || data.message || "Sorry, I couldn't process that."
+        text: response.output || response.message || "Sorry, I couldn't process that."
       }]);
 
       setIsLoading(false);
