@@ -1,6 +1,9 @@
 {
   "dependencies": {
     "react-markdown": "^10.1.0",
-    "react-scripts": "^5.0.1"
+    "react-scripts": "^0.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^4.9.5"
   }
 }
